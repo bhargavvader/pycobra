@@ -126,6 +126,7 @@ def gen_machine_colors(only_colors=False, num_colors=None, indice_info=None, rgb
 
 def voronoi_finite_polygons_2d(vor, radius=None):
     """
+    Code originally written by pv: https://gist.github.com/pv/8036995.
     Helper method for voronoi.
     Reconstruct infinite voronoi regions in a 2D diagram to finite
     regions.
