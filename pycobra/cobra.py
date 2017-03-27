@@ -12,21 +12,6 @@ import numbers
 
 logger = logging.getLogger('pycobra.cobra')
 
-"""
-TODO:
-
-1) Vectorise/cythonise the predict method
-    - could it also be parallelised?
-2) Scikit-Learn conventions
-    - fit - does this kind of thing work here?
-3) Wrappers for other popular ML/stat libraries
-    - mlpy
-    - all NN libraries
-    - ensembles, etc
-    - your own array as well
-4) Support Set algo: use indice_info from visualisations
-"""
-
 # when we have more util functions, we can add this there
 # def get_random_state(seed):
 #      """ Turn seed into a np.random.RandomState instance.
@@ -326,8 +311,6 @@ class cobra():
         Returns
         -------
         result: array of prediction
-
-        TODO: remove, add this to predict
         """
         result = np.zeros(len(X_array))
         count = 0
