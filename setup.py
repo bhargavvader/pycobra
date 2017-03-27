@@ -7,8 +7,8 @@ setup(name='pycobra',
       version=version,
       description='Python implementation of COBRA algorithm with regression analysis',
       author=['Bhargav Srinivasa Desikan', 'Benjamin Guedj'],
-      author_email=['bhargavvader@gmail.com', 'benjamin.guedj@inria.fr']
-      url='http://github.com/bhargavvader/pycobra',
+      author_email=['bhargavvader@gmail.com', 'benjamin.guedj@inria.fr'],
+      url='https://github.com/bhargavvader/pycobra',
       license='MIT',
       classifiers=[
           'Development Status :: 4 - Beta',
