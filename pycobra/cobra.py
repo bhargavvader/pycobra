@@ -1,3 +1,5 @@
+# Licensed under the MIT License - https://opensource.org/licenses/MIT
+
 from sklearn import linear_model 
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
