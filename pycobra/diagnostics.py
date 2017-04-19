@@ -1,3 +1,5 @@
+# Licensed under the MIT License - https://opensource.org/licenses/MIT
+
 from sklearn.metrics import mean_squared_error
 import itertools
 import numpy as np

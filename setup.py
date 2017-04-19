@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Licensed under the MIT License - https://opensource.org/licenses/MIT
+
 from setuptools import setup
 
 version = "0.1.0"
