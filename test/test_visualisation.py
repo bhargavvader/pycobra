@@ -3,9 +3,9 @@
 import unittest
 import numpy as np
 
-from pycobra.cobra import cobra
-from pycobra.diagnostics import diagnostics
-from pycobra.visualisation import visualisation
+from pycobra.cobra import Cobra
+from pycobra.diagnostics import Diagnostics
+from pycobra.visualisation import Visualisation
 
 import logging
 
@@ -30,24 +30,21 @@ class TestVisualisation(unittest.TestCase):
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
         Y_eps = Y[D1 + D2:D1 + D2 + D3]
 
-        COBRA = cobra(X_train, Y_train, epsilon = 0.5, random_state=0)
-
-        COBRA.split_data(D1, D1 + D2)
-        COBRA.load_default()
-        COBRA.load_machine_predictions()
+        COBRA = Cobra(random_state=0)
+        COBRA.fit(X_train, Y_train, epsilon = 0.5)
         self.test_data = X_test
         self.test_response = Y_test
         self.eps_data = X_eps
         self.eps_response = Y_eps
         self.cobra = COBRA
-        self.cobra_vis = visualisation(self.cobra, self.test_data, self.test_response)
+        self.cobra_vis = Visualisation(self.cobra, self.test_data, self.test_response)
 
     def test_indice_info(self):
 
-        indices, mse = self.cobra_vis.indice_info(self.test_data, self.test_response, epsilon=self.cobra.epsilon)
-        expected_indices, expected_mse = ('tree', 'random_forest'), 0.11358087549204622
+        indices, mse = self.cobra_vis.indice_info(self.test_data[0:2], self.test_response[0:2], epsilon=self.cobra.epsilon)
+        expected_indices, expected_mse = ('ridge','lasso'), 0.3516475171334160
         self.assertEqual(expected_indices, indices[0])
-        self.assertAlmostEqual(expected_mse, mse[0])
+        self.assertAlmostEqual(expected_mse, mse[0][0])
 
 
 

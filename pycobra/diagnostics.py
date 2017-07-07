@@ -3,22 +3,22 @@
 from sklearn.metrics import mean_squared_error
 import itertools
 import numpy as np
-from pycobra.cobra import cobra
+from pycobra.cobra import Cobra
 import math
 
 import logging
 
 logger = logging.getLogger('pycobra.diagnostics')
 
-class diagnostics():
+class Diagnostics():
     """
     Optimization of parameters, and error details. 
     """
-    def __init__ (self, cobra, X_test, y_test, load_MSE=True, random_state=None):
+    def __init__ (self, cobra, X_test=None, y_test=None, load_MSE=True, random_state=None):
         """
         Parameters
         ----------
-        cobra: pycobra.cobra object
+        cobra: pycobra.cobra.Cobra object
             cobra object on which we want to run our analysis on.
 
         X_test : array-like, shape = [n_samples, n_features], optional.
@@ -31,10 +31,11 @@ class diagnostics():
             loads MSE and error bound values into diagnostics object.
         """
         self.cobra = cobra
+        # X_test and y_test is only to compare MSEs of machines.
         self.X_test = X_test
         self.y_test = y_test
 
-        if load_MSE:
+        if load_MSE and X_test is not None:
             self.load_MSE()
 
         self.random_state = random_state
@@ -48,10 +49,11 @@ class diagnostics():
         """
         self.machine_test_results = {}
         self.machine_MSE = {}
-
-        self.machine_test_results["COBRA"] = self.cobra.predict_array(self.X_test)
-        self.machine_MSE["COBRA"] = mean_squared_error(self.y_test, self.machine_test_results["COBRA"])
         
+        self.machine_test_results["COBRA"] = self.cobra.predict(self.X_test)
+        # add MSE
+        self.machine_MSE["COBRA"] = mean_squared_error(self.y_test, self.machine_test_results["COBRA"])
+
         for machine in self.cobra.machines:
             self.machine_test_results[machine] = self.cobra.machines[machine].predict(self.X_test)
             # add MSE
@@ -91,20 +93,20 @@ class diagnostics():
         opt: optimal alpha combination
 
         """
-
         if epsilon is None:
             epsilon = self.cobra.epsilon
 
         MSE = {}
         for alpha in range(1, len(self.cobra.machines) + 1):
-                machine = cobra(self.X_test, self.y_test, epsilon=epsilon, random_state=self.random_state)
-                # for a single data point
-                if single:
-                    result = machine.predict(X.reshape(1, -1), M=alpha) 
-                    MSE[alpha] = np.square(y - result)
-                else:
-                    results = machine.predict_array(X, M=alpha)
-                    MSE[alpha] = (mean_squared_error(y, results))
+            machine = Cobra(random_state=self.random_state)
+            machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon)
+            # for a single data point
+            if single:
+                result = machine.predict(X, M=alpha) 
+                MSE[alpha] = np.square(y - result)
+            else:
+                results = machine.predict(X, M=alpha)
+                MSE[alpha] = (mean_squared_error(y, results))
 
         if info:
             return MSE      
@@ -150,7 +152,8 @@ class diagnostics():
             machine_names = self.cobra.machines.keys()
             use = list(itertools.combinations(machine_names, num))
             for combination in use:
-                machine = cobra(self.X_test, self.y_test, epsilon = epsilon, random_state=self.random_state, default=False)
+                machine = Cobra(random_state=self.random_state)
+                machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon, default=False)
                 machine.split_data()
                 machine.load_default(machine_list=combination)
                 machine.load_machine_predictions() 
@@ -158,7 +161,7 @@ class diagnostics():
                     result = machine.predict(X.reshape(1, -1)) 
                     MSE[combination] = np.square(y - result)
                 else:
-                    results = machine.predict_array(X)
+                    results = machine.predict(X)
                     MSE[combination] = (mean_squared_error(y, results))
 
         if info:
@@ -202,8 +205,9 @@ class diagnostics():
 
         MSE = {}
         for epsilon in erange:
-            machine = cobra(self.X_test, self.y_test, epsilon=epsilon, random_state=self.random_state)
-            results = machine.predict_array(X)
+            machine = Cobra(random_state=self.random_state)
+            machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon)
+            results = machine.predict(X)
             MSE[epsilon] = (mean_squared_error(y, results))
 
         if info:
@@ -220,10 +224,10 @@ class diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want for optimal split.
         
-        y_test: float
+        y: float
             Target value for query to compare.
 
         epsilon: float, optional.
@@ -253,11 +257,12 @@ class diagnostics():
 
         MSE = {}
         for k, l in split:
-            machine = cobra(self.X_test, self.y_test, epsilon=epsilon, random_state=self.random_state, default=False)
-            machine.split_data(int(k * len(self.X_test)), int((k + l) * len(self.X_test)))
+            machine = Cobra(random_state=self.random_state)
+            machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon, default=False)
+            machine.split_data(int(k * len(self.cobra.X)), int((k + l) * len(self.cobra.X)))
             machine.load_default()
             machine.load_machine_predictions() 
-            results = machine.predict_array(X)
+            results = machine.predict(X)
             MSE[(k, l)] = (mean_squared_error(y, results))            
 
         if graph:
@@ -313,7 +318,8 @@ class diagnostics():
         # looping over epsilon and alpha values
         for epsilon in erange:
             for num in n_machines:
-                machine = cobra(self.X_test, self.y_test, epsilon=epsilon, random_state=self.random_state)
+                machine = Cobra(random_state=self.random_state)
+                machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon)
                 result = machine.predict(X.reshape(1, -1), M=num)
                 MSE[(num, epsilon)] = np.square(y - result)
     
@@ -365,7 +371,8 @@ class diagnostics():
                 machine_names = self.cobra.machines.keys()
                 use = list(itertools.combinations(machine_names, num))
                 for combination in use:
-                    machine = cobra(self.X_test, self.y_test, epsilon = epsilon, random_state=self.random_state, default=False)
+                    machine = Cobra(random_state=self.random_state)
+                    machine.fit(self.cobra.X, self.cobra.y, epsilon=epsilon, default=False)
                     machine.split_data()
                     machine.load_default(machine_list=combination)
                     machine.load_machine_predictions() 

@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 
-import pycobra.cobra as cobra
+from pycobra.cobra import Cobra
 import logging
 
 class TestPrediction(unittest.TestCase):
@@ -27,11 +27,8 @@ class TestPrediction(unittest.TestCase):
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
         Y_eps = Y[D1 + D2:D1 + D2 + D3]
 
-        COBRA = cobra.cobra(X_train, Y_train, epsilon = 0.5, random_state=0)
-
-        COBRA.split_data(D1, D1 + D2)
-        COBRA.load_default()
-        COBRA.load_machine_predictions()
+        COBRA = Cobra(random_state=0)
+        COBRA.fit(X_train, Y_train, epsilon = 0.5)
         self.test_data = X_test
         self.eps_data = X_eps
         self.cobra = COBRA
