@@ -44,23 +44,24 @@ class TestOptimal(unittest.TestCase):
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse)
 
-    def test_alpha_grid(self):
-        (alpha, epsilon), mse = self.cobra_diagnostics.optimal_alpha_grid(self.test_data[0], self.test_response[0])
-        expected_alpha, expected_mse = 1, 0.0133166
-        self.assertEqual(expected_alpha, alpha)
-        self.assertAlmostEqual(expected_mse, mse[0])
+    # the grid tests are skipped because of long build times - to test these methods un-comment and run the tests again.
+    # def test_alpha_grid(self):
+    #     (alpha, epsilon), mse = self.cobra_diagnostics.optimal_alpha_grid(self.test_data[0], self.test_response[0])
+    #     expected_alpha, expected_mse = 1, 0.0133166
+    #     self.assertEqual(expected_alpha, alpha)
+    #     self.assertAlmostEqual(expected_mse, mse[0])
+
+    # def test_machines_grid(self):
+    #     (machines, epsilon), mse = self.cobra_diagnostics.optimal_machines_grid(self.test_data[0], self.test_response[0])
+    #     expected_machines, expected_mse = ('ridge',), 0.00026522376609884802
+    #     self.assertEqual(sorted(expected_machines), sorted(machines))
+    #     self.assertAlmostEqual(expected_mse, mse[0])
 
     def test_machines(self):
         machines, mse = self.cobra_diagnostics.optimal_machines(self.test_data, self.test_response)
         expected_machines, expected_mse = ('ridge','tree', 'random_forest'), 0.066681946568334649
         self.assertEqual(sorted(expected_machines), sorted(machines))
         self.assertAlmostEqual(expected_mse, mse)
-
-    def test_machines_grid(self):
-        (machines, epsilon), mse = self.cobra_diagnostics.optimal_machines_grid(self.test_data[0], self.test_response[0])
-        expected_machines, expected_mse = ('ridge',), 0.00026522376609884802
-        self.assertEqual(sorted(expected_machines), sorted(machines))
-        self.assertAlmostEqual(expected_mse, mse[0])
 
     def test_epsilon(self):
         epsilon, mse = self.cobra_diagnostics.optimal_epsilon(self.test_data, self.test_response)
