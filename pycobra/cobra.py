@@ -4,6 +4,8 @@ from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import shuffle
+from sklearn.base import BaseEstimator
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 import math
 import numpy as np
@@ -14,37 +16,40 @@ import numbers
 
 logger = logging.getLogger('pycobra.cobra')
 
-# when we have more util functions, we can add this there
-# def get_random_state(seed):
-#      """ Turn seed into a np.random.RandomState instance.
 
-#          Method originally from maciejkula/glove-python, and written by @joshloyal
-#      """
-#      if seed is None or seed is np.random:
-#          return np.random.mtrand._rand
-#      if isinstance(seed, (numbers.Integral, np.integer)):
-#          return np.random.RandomState(seed)
-#      if isinstance(seed, np.random.RandomState):
-#         return seed
-#      raise ValueError('%r cannot be used to seed a np.random.RandomState instance' % seed)
-
-
-class cobra():
+class Cobra(BaseEstimator):
     """
     COBRA - Nonlinear Aggregation of Predictors.
     
     Based on the paper by Biau, Guedj et al [2016], this is a pythonic implementation of the original COBRA code.
     """
-    def __init__(self, X, y, epsilon=None, default=True, X_k=None, X_l=None, y_k=None, y_l=None, test_data=None, test_response=None, random_state=None, line_points=80):
+    def __init__(self, random_state=None):
         """
         Parameters
         ----------
-        X : shape = [n_samples, n_features]
-            Training data
+        random_state: integer or a numpy.random.RandomState object. 
+            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
+            reproducibility of your experiments, for example.
+            
+        Attributes
+        ----------
+        
+        machines: A dictionary which maps machine names to the machine objects.
+                The machine object must have a predict method for it to be used during aggregation.
 
-        y : array-like, shape = [n_samples] 
-            Target values
+        machine_predictions: A dictionary which maps machine name to it's predictions over X_l
+                This value is used to determine which points from y_l are used to aggregate.
+        
+        all_predictions: numpy array with all the predictions, to be used for epsilon manipulation.
 
+        """
+        self.machines = {}
+        self.random_state = random_state
+
+    def fit(self, X, y, default=True, epsilon=None, X_k=None, X_l=None, y_k=None, y_l=None, X_epsilon=None, y_epsilon=None, line_points=80):
+        """
+        Parameters
+        ----------
         epsilon: float, optional
             Epsilon value described in the paper which determines which points are selected for the aggregate.
             Default value is determined by running a grid if test data is provided. 
@@ -67,61 +72,155 @@ class cobra():
         y_l : array-like, shape = [n_samples] 
             Target values which are actually used in the aggregation of COBRA.
 
-        test_data: shape = [n_samples, n_features]
+        X_epsilon: shape = [n_samples, n_features]
             Testing data used to determine optimal data-dependant epsilon value if it is not passed.
 
-        test_response : array-like, shape = [n_samples] 
+        y_epsilon : array-like, shape = [n_samples] 
             Target values used to determine optimal data-dependant epsilon value if it is not passed.
 
-        random_state: integer or a numpy.random.RandomState object. 
-            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
-            reproducibility of your experiments, for example.
-
         line_points: integer, optional
-            Number of epsilon values to traverse the grid.
-            
-        Attributes
-        ----------
-        
-        machines: A dictionary which maps machine names to the machine objects.
-                The machine object must have a predict method for it to be used during aggregation.
-
-        machine_predictions: A dictionary which maps machine name to it's predictions over X_l
-                This value is used to determine which points from y_l are used to aggregate.
-        
-        all_predictions: numpy array with all the predictions, to be used for epsilon manipulation.
-
+            Number of epsilon values to traverse the grid if epsilon is not passed.
         """
+
+        X, y = check_X_y(X, y)
         self.X = X
         self.y = y
-        self.epsilon = epsilon
         self.X_k = X_k
         self.X_l = X_l
         self.y_k = y_k
         self.y_l = y_l
-
-        self.machines = {}
-
-        self.random_state = random_state
+        self.epsilon = epsilon
 
         # set-up COBRA with default machines
         if default:
             self.split_data()
             self.load_default()
             self.load_machine_predictions()
-        # auto epsilon without test data
-        if self.epsilon is None and test_data is None:
+        # auto epsilon
+        if self.epsilon is None and X_epsilon is not None:
+            from pycobra.diagnostics import Diagnostics
+            cobra_diagnostics = Diagnostics(cobra=self)
+            self.epsilon = cobra_diagnostics.optimal_epsilon(X_epsilon, y_epsilon, line_points=line_points)[0]
+        
+        if self.epsilon is None:
             a, size = sorted(self.all_predictions), len(self.all_predictions)
             res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
             emin = min(res)
             emax = max(a) - min(a)
             self.epsilon = (emin + emax) / 2
 
-        # auto epsilon with test data
-        if self.epsilon is None and test_data is not None:
-            from pycobra.diagnostics import diagnostics
-            cobra_diagnostics = diagnostics(cobra=self, X_test=test_data, y_test=test_response, load_MSE=True)
-            self.epsilon = cobra_diagnostics.optimal_epsilon(test_data, test_response, line_points=line_points)[0]
+        return self
+
+    def pred(self, X, M, info=False):
+        """
+        Performs the COBRA aggregation scheme, used in predict method.
+        
+        Parameters
+        ----------
+        X: array-like, [n_features]
+
+        M: int, optional
+            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+
+        info: boolean, optional
+            If info is true the list of points selected in the aggregation is returned.
+
+        Returns
+        -------
+        avg: prediction
+
+        """
+
+        # dictionary mapping machine to points selected
+        select = {}
+        for machine in self.machines:
+            # machine prediction
+            val = self.machines[machine].predict(X)
+            select[machine] = set()
+            # iterating from l to n
+            # replace with numpy iteration
+            for count in range(0, len(self.X_l)):
+                try:
+                    # if value is close to prediction, select the indice
+                    if math.fabs(self.machine_predictions[machine][count] - val) <= self.epsilon:
+                        select[machine].add(count)
+                except ValueError:
+                    logger.log("Value Error")
+                    continue
+
+        points = []
+        # count is the indice number. 
+        for count in range(0, len(self.X_l)):
+            # row check is number of machines which picked up a particular point
+            row_check = 0
+            for machine in select:
+                if count in select[machine]:
+                    row_check += 1
+            if row_check == M:
+                points.append(count)    
+        
+        # if no points are selected, return 0
+        if len(points) == 0:
+            if info:
+                logger.info("No points were selected, prediction is 0")
+                return (0, 0)
+            return 0
+
+        # aggregate
+        avg = 0 
+        for point in points:
+            avg += self.y_l[point]
+        avg = avg / len(points)
+
+        if info:
+            return avg, points
+        return avg
+
+    def predict(self, X, M=None, info=False):
+        """
+        Performs the COBRA aggregation scheme, calls pred.
+        
+        Parameters
+        ----------
+        X: array-like, [n_features]
+
+        M: int, optional
+            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+
+        info: boolean, optional
+            If info is true the list of points selected in the aggregation is returned.
+
+        Returns
+        -------
+        result: prediction
+
+        """
+
+        # sets M as the total number of machines as a default value
+
+        X = check_array(X)
+
+        if M is None:
+            M = len(self.machines)
+        if X.ndim == 1:
+            return self.pred(X.reshape(1, -1), info=info, M=M)
+
+        result = np.zeros(len(X))
+        avg_points = 0
+        index = 0
+        for vector in X:
+            if info:
+                result[index], points = self.pred(vector.reshape(1, -1), info=info, M=M)
+                avg_points += len(points)
+            else:
+                result[index] = self.pred(vector.reshape(1, -1), info=info, M=M)              
+            index += 1
+
+        if info:
+            avg_points = avg_points / len(X_array)
+            return result, avg_points
+
+        return result
 
 
     def split_data(self, k=None, l=None, shuffle_data=False):
@@ -168,11 +267,11 @@ class cobra():
         """
         for machine in machine_list:
             if machine == 'lasso':
-                self.machines['lasso'] = linear_model.LassoLars().fit(self.X_k, self.y_k)
+                self.machines['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k, self.y_k)
             if machine == 'tree':  
                 self.machines['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k, self.y_k)
             if machine == 'ridge':
-                self.machines['ridge'] = linear_model.Ridge(random_state=self.random_state).fit(self.X_k, self.y_k)
+                self.machines['ridge'] = linear_model.RidgeCV().fit(self.X_k, self.y_k)
             if machine == 'random_forest':
                 self.machines['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k, self.y_k)
 
@@ -223,111 +322,4 @@ class cobra():
         if predictions is not None:
             self.machine_predictions = predictions
 
-
-    def predict(self, X, M=None, info=False):
-        """
-        Performs the COBRA aggregation scheme for a single input vector X.
-        
-        Parameters
-        ----------
-        X: array-like, [n_features]
-
-        M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
-
-        info: boolean, optional
-            If info is true the list of points selected in the aggregation is returned.
-
-        Returns
-        -------
-        avg: prediction
-
-        """
-
-        # sets M as the total number of machines as a default value
-        if M is None:
-            M = len(self.machines)
-
-        if self.X_l is not None:
-            # dictionary mapping machine to points selected
-            select = {}
-            for machine in self.machines:
-                # machine prediction
-                val = self.machines[machine].predict(X)
-                select[machine] = set()
-                # iterating from l to n
-                # replace with numpy iteration
-                for count in range(0, len(self.X_l)):
-                    try:
-                        # if value is close to prediction, select the indice
-                        if math.fabs(self.machine_predictions[machine][count] - val) <= self.epsilon:
-                            select[machine].add(count)
-                    except ValueError:
-                        logger.log("Value Error")
-                        continue
-
-            points = []
-            # count is the indice number. 
-            for count in range(0, len(self.X_l)):
-                # row check is number of machines which picked up a particular point
-                row_check = 0
-                for machine in select:
-                    if count in select[machine]:
-                        row_check += 1
-                if row_check == M:
-                    points.append(count)    
-        
-        # if no points are selected, return 0
-        if len(points) == 0:
-            if info:
-                logger.info("No points were selected, prediction is 0")
-                return (0, 0)
-            return 0
-
-        # aggregate
-        avg = 0 
-        for point in points:
-            avg += self.y_l[point]
-        avg = avg / len(points)
-
-        if info:
-            return avg, points
-
-        return avg
-
-
-    def predict_array(self, X_array, info=False, M=None):
-        """
-        Performs the COBRA aggregation scheme for an array X
-        
-        Parameters
-        ----------
-        X_array: array-like, [n_features]
-
-        M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
-
-        info: boolean, optional
-            If info is true the average number of points selected for a single vector is returned.
-
-        Returns
-        -------
-        result: array of prediction
-        """
-        result = np.zeros(len(X_array))
-        count = 0
-        avg_points = 0
-        for X in X_array:
-            if info:
-                result[count], points = self.predict(X.reshape(1, -1), info=info, M=M)
-                avg_points += len(points)
-            else:
-                result[count] = self.predict(X.reshape(1, -1), info=info, M=M)              
-            count += 1
-
-        if info:
-            avg_points = avg_points / len(X_array)
-            return result, avg_points
-
-        return result
 

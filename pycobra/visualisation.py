@@ -11,8 +11,8 @@ import random
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.metrics import mean_squared_error
 
-from pycobra.diagnostics import diagnostics
-from pycobra.cobra import cobra
+from pycobra.diagnostics import Diagnostics
+from pycobra.cobra import Cobra
 
 from collections import OrderedDict
 
@@ -212,22 +212,22 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     return new_regions, np.asarray(new_vertices)
 
 
-class visualisation():
+class Visualisation():
     """
     Plots and visualisations of cobra.
     If X_test and y_test is loaded, you can run the plotting functions with no parameters.
     """
-    def __init__ (self, cobra, X_test=None, y_test=None, plot_size=8, random_state=None):
+    def __init__ (self, cobra, X_test, y_test, plot_size=8, random_state=None):
         """
         Parameters
         ----------
-        cobra: pycobra.cobra object
+        cobra: pycobra.cobra.Cobra object
             cobra object on which we want to run our analysis on.
 
-        X_test : array-like, shape = [n_samples, n_features], optional.
+        X_test : array-like, shape = [n_samples, n_features].
             Testing data.
 
-        y_test : array-like, shape = [n_samples], optional.
+        y_test : array-like, shape = [n_samples].
             Test data target values.
         
         plot_size: int, optional
@@ -238,37 +238,24 @@ class visualisation():
         self.X_test = X_test
         self.y_test = y_test
         self.plot_size = plot_size
-        if self.X_test is not None:
-            self.load_results()
 
+        # load results so plotting doesn't need parameters
+        self.machine_test_results = {}
+        self.machine_test_results["COBRA"] = self.cobra.predict(self.X_test)        
+        for machine in self.cobra.machines:
+            self.machine_test_results[machine] = self.cobra.machines[machine].predict(self.X_test)
+        
         self.random_state = random_state
         if self.random_state is None:
             self.random_state = self.cobra.random_state
 
-    def load_results(self):
-        """
-        If using the same test data, store values of all machines predictions on test data so plotting/analysing is easier.
-        """
-        self.machine_test_results = {}
 
-        self.machine_test_results["COBRA"] = self.cobra.predict_array(self.X_test)        
-        for machine in self.cobra.machines:
-            self.machine_test_results[machine] = self.cobra.machines[machine].predict(self.X_test)
-
-
-    def plot_machines(self, X_test=None, y_test=None, machines=None):
+    def plot_machines(self, machines=None):
         """
         Plot the results of the machines versus the actual answers (testing space).
         
         Parameters
         ----------
-
-        X_test : array-like, shape = [n_samples, n_features], optional.
-            Testing data.
-
-        y_test : array-like, shape = [n_samples], optional.
-            Test data target values.
-
         machines: list, optional
             List of machines to plot.
         """
@@ -281,8 +268,7 @@ class visualisation():
 
         colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
-        if y_test is not None:
-            plt.scatter(linspace, y_test, color=colors[0], label="Truth") 
+        plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
 
         for machine, color in zip(machines, colors[1:]):
             plt.scatter(linspace, self.machine_test_results[machine], color=color, label=machine)
@@ -292,16 +278,12 @@ class visualisation():
         plt.show()
 
 
-    def QQ(self, y_test, machine="COBRA"):
+    def QQ(self, machine="COBRA"):
         """
         Plots the machine results vs the actual results in the form of a QQ plot.
         
         Parameters
         ----------
-
-        y_test: array-like, shape = [n_samples]
-            Truth values to compare machine predictions against.
-
         machine: string, optional
             Name of machine to perform QQ plot.
         """
@@ -310,13 +292,13 @@ class visualisation():
         pred = self.machine_test_results[machine]
 
         # this is to make the plot look neater
-        min_limits = math.fabs(min(min(pred), min(y_test))) 
-        max_limits = max(max(pred), max(y_test))
-        axes.set_xlim([min(min(pred), min(y_test)) - min_limits, max(max(pred), max(y_test)) + max_limits])
-        axes.set_ylim([min(min(pred), min(y_test)) - min_limits, max(max(pred), max(y_test)) + max_limits])
+        min_limits = math.fabs(min(min(pred), min(self.y_test))) 
+        max_limits = max(max(pred), max(self.y_test))
+        axes.set_xlim([min(min(pred), min(self.y_test)) - min_limits, max(max(pred), max(self.y_test)) + max_limits])
+        axes.set_ylim([min(min(pred), min(self.y_test)) - min_limits, max(max(pred), max(self.y_test)) + max_limits])
 
         # scatter the machine responses versus the actual y_test
-        plt.scatter(y_test, pred, label=machine)
+        plt.scatter(self.y_test, pred, label=machine)
         axes.plot(axes.get_xlim(), axes.get_ylim(), ls="--", c=".3")
 
         # labels
@@ -334,7 +316,7 @@ class visualisation():
         Parameters
         ----------
         machine: string, optional
-            Name of machine to perform QQ plot.
+            Name of machine to perform boxplot.
         """
 
         if machines is None:
@@ -350,18 +332,12 @@ class visualisation():
         plt.show()
 
 
-    def indice_info(self, X_test, y_test, epsilon=None, line_points=200):
+    def indice_info(self, X_test=None, y_test=None, epsilon=None, line_points=200):
         """
         Method to return information about each indices (query) optimal machines for testing data.
 
         Parameters
         ----------
-        X_test : array-like, shape = [n_samples, n_features], optional.
-            Testing data.
-
-        y_test : array-like, shape = [n_samples], optional.
-            Test data target values.
-
         epsilon: float, optional
             Epsilon value to use for diagnostics
         
@@ -377,10 +353,15 @@ class visualisation():
 
         """
 
+        if X_test is None:
+            X_test = self.X_test  
+        if y_test is None:
+            y_test = self.y_test
+
         indice = 0
         indice_info = {}
         MSE = {}
-        cobra_diagnostics = diagnostics(cobra=self.cobra, X_test=self.X_test, y_test=self.y_test, load_MSE=True, random_state=self.random_state)
+        cobra_diagnostics = Diagnostics(cobra=self.cobra, random_state=self.random_state)
         if epsilon is None:
             for data_point, response in zip(X_test, y_test):
                 info = cobra_diagnostics.optimal_machines_grid(data_point, response, line_points=line_points)
@@ -395,18 +376,12 @@ class visualisation():
         return indice_info, MSE
 
 
-    def color_cobra(self, X_test,  y_test=None, line_points=200, epsilon=None, indice_info=None, plot_machines=["ridge", "lasso", "random_forest", "tree"], single=False, machine_colors=None):
+    def color_cobra(self, X_test=None, y_test=None, line_points=200, epsilon=None, indice_info=None, plot_machines=["ridge", "lasso", "random_forest", "tree"], single=False, machine_colors=None):
         """
         Plot the input space and color query points based on the optimal machine used for that point.
 
         Parameters
         ----------
-        X_test : array-like, shape = [n_samples, n_features], optional.
-            Testing data - here it serves as our input space.
-
-        y_test : array-like, shape = [n_samples], optional.
-            Test data target values. Used to find indice_info if it isn't passed.
-
         epsilon: float, optional
             Epsilon value to use for diagnostics. Used to find indice_info if it isn't passed.
         
@@ -428,8 +403,12 @@ class visualisation():
         """
 
         if indice_info is None:
-            indice_info = self.indice_info(X_test, y_test, line_points, epsilon)
-        
+            indice_info = self.indice_info(line_points, epsilon)
+  
+        if X_test is None:
+            X_test = self.X_test  
+        if y_test is None:
+            y_test = self.y_test      
         # we want to plot only two columns
         data_1 = X_test[:,0]
         data_2 = X_test[:,1]
@@ -469,18 +448,12 @@ class visualisation():
                         ax.scatter(data_1[indice], data_2[indice], color=machine_colors[machine])
 
 
-    def voronoi(self, X_test, y_test=None, line_points=200, epsilon=None, indice_info=None, MSE=None, plot_machines=["ridge", "lasso", "random_forest", "tree"], machine_colors=None, gradient=False, single=False):
+    def voronoi(self, X_test=None, y_test=None, line_points=200, epsilon=None, indice_info=None, MSE=None, plot_machines=["ridge", "lasso", "random_forest", "tree"], machine_colors=None, gradient=False, single=False):
         """
         Plot the input space and color query points as a Voronoi Tesselation based on the optimal machine used for that point.
 
         Parameters
         ----------
-        X_test : array-like, shape = [n_samples, n_features], optional.
-            Testing data - here it serves as our input space.
-
-        y_test : array-like, shape = [n_samples], optional.
-            Test data target values. Used to find indice_info if it isn't passed.
-
         epsilon: float, optional
             Epsilon value to use for diagnostics. Used to find indice_info if it isn't passed.
         
@@ -507,9 +480,13 @@ class visualisation():
             Depending on the kind of coloring, a dictionary mapping machines to colors.
             
         """
+        if X_test is None:
+            X_test = self.X_test  
+        if y_test is None:
+            y_test = self.y_test
 
         if indice_info is None:
-            indice_info, MSE = self.indice_info(X_test, y_test, line_points, epsilon)
+            indice_info, MSE = self.indice_info(line_points, epsilon)
             
         # passing input space to set up voronoi regions.
         points = np.hstack((np.reshape(X_test[:,0], (len(X_test[:,0]), 1)), np.reshape(X_test[:,1], (len(X_test[:,1]), 1))))
