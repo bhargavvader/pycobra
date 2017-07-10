@@ -37,7 +37,7 @@ class TestVisualisation(unittest.TestCase):
         self.eps_data = X_eps
         self.eps_response = Y_eps
         self.cobra = COBRA
-        self.cobra_vis = Visualisation(self.cobra, self.test_data, self.test_response)
+        self.cobra_vis = Visualisation(self.cobra, self.test_data[0:2], self.test_response[0:2])
 
     def test_indice_info(self):
 

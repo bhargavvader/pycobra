@@ -10,4 +10,4 @@ install:
   - pip install scikit-learn
   - pip install matplotlib
 # command to run tests
-script: nosetests
+script: travis_wait 20 nosetests
