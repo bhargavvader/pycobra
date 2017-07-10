@@ -43,7 +43,7 @@ class TestVisualisation(unittest.TestCase):
 
         indices, mse = self.cobra_vis.indice_info(self.test_data[0:2], self.test_response[0:2], epsilon=self.cobra.epsilon)
         expected_indices, expected_mse = ('ridge','lasso'), 0.3516475171334160
-        self.assertEqual(expected_indices, indices[0])
+        self.assertEqual(sorted(expected_indices), sorted(indices[0]))
         self.assertAlmostEqual(expected_mse, mse[0][0])
 
 
