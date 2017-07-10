@@ -256,13 +256,6 @@ class Visualisation():
         
         Parameters
         ----------
-
-        X_test : array-like, shape = [n_samples, n_features], optional.
-            Testing data.
-
-        y_test : array-like, shape = [n_samples], optional.
-            Test data target values.
-
         machines: list, optional
             List of machines to plot.
         """
@@ -291,10 +284,6 @@ class Visualisation():
         
         Parameters
         ----------
-
-        y_test: array-like, shape = [n_samples]
-            Truth values to compare machine predictions against.
-
         machine: string, optional
             Name of machine to perform QQ plot.
         """
@@ -327,7 +316,7 @@ class Visualisation():
         Parameters
         ----------
         machine: string, optional
-            Name of machine to perform QQ plot.
+            Name of machine to perform boxplot.
         """
 
         if machines is None:

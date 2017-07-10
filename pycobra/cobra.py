@@ -16,20 +16,6 @@ import numbers
 
 logger = logging.getLogger('pycobra.cobra')
 
-# when we have more util functions, we can add this there
-# def get_random_state(seed):
-#      """ Turn seed into a np.random.RandomState instance.
-
-#          Method originally from maciejkula/glove-python, and written by @joshloyal
-#      """
-#      if seed is None or seed is np.random:
-#          return np.random.mtrand._rand
-#      if isinstance(seed, (numbers.Integral, np.integer)):
-#          return np.random.RandomState(seed)
-#      if isinstance(seed, np.random.RandomState):
-#         return seed
-#      raise ValueError('%r cannot be used to seed a np.random.RandomState instance' % seed)
-
 
 class Cobra(BaseEstimator):
     """
@@ -37,7 +23,30 @@ class Cobra(BaseEstimator):
     
     Based on the paper by Biau, Guedj et al [2016], this is a pythonic implementation of the original COBRA code.
     """
-    def __init__(self,random_state=None):
+    def __init__(self, random_state=None):
+        """
+        Parameters
+        ----------
+        random_state: integer or a numpy.random.RandomState object. 
+            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
+            reproducibility of your experiments, for example.
+            
+        Attributes
+        ----------
+        
+        machines: A dictionary which maps machine names to the machine objects.
+                The machine object must have a predict method for it to be used during aggregation.
+
+        machine_predictions: A dictionary which maps machine name to it's predictions over X_l
+                This value is used to determine which points from y_l are used to aggregate.
+        
+        all_predictions: numpy array with all the predictions, to be used for epsilon manipulation.
+
+        """
+        self.machines = {}
+        self.random_state = random_state
+
+    def fit(self, X, y, default=True, epsilon=None, X_k=None, X_l=None, y_k=None, y_l=None, X_epsilon=None, y_epsilon=None, line_points=80):
         """
         Parameters
         ----------
@@ -63,36 +72,14 @@ class Cobra(BaseEstimator):
         y_l : array-like, shape = [n_samples] 
             Target values which are actually used in the aggregation of COBRA.
 
-        test_data: shape = [n_samples, n_features]
+        X_epsilon: shape = [n_samples, n_features]
             Testing data used to determine optimal data-dependant epsilon value if it is not passed.
 
-        test_response : array-like, shape = [n_samples] 
+        y_epsilon : array-like, shape = [n_samples] 
             Target values used to determine optimal data-dependant epsilon value if it is not passed.
 
-        random_state: integer or a numpy.random.RandomState object. 
-            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
-            reproducibility of your experiments, for example.
-
         line_points: integer, optional
-            Number of epsilon values to traverse the grid.
-            
-        Attributes
-        ----------
-        
-        machines: A dictionary which maps machine names to the machine objects.
-                The machine object must have a predict method for it to be used during aggregation.
-
-        machine_predictions: A dictionary which maps machine name to it's predictions over X_l
-                This value is used to determine which points from y_l are used to aggregate.
-        
-        all_predictions: numpy array with all the predictions, to be used for epsilon manipulation.
-
-        """
-        self.machines = {}
-        self.random_state = random_state
-
-    def fit(self, X, y, epsilon=None, X_k=None, X_l=None, y_k=None, y_l=None, default=True, X_epsilon=None, y_epsilon=None, line_points=80):
-        """
+            Number of epsilon values to traverse the grid if epsilon is not passed.
         """
 
         X, y = check_X_y(X, y)
@@ -125,6 +112,25 @@ class Cobra(BaseEstimator):
         return self
 
     def pred(self, X, M, info=False):
+        """
+        Performs the COBRA aggregation scheme, used in predict method.
+        
+        Parameters
+        ----------
+        X: array-like, [n_features]
+
+        M: int, optional
+            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+
+        info: boolean, optional
+            If info is true the list of points selected in the aggregation is returned.
+
+        Returns
+        -------
+        avg: prediction
+
+        """
+
         # dictionary mapping machine to points selected
         select = {}
         for machine in self.machines:
@@ -172,7 +178,7 @@ class Cobra(BaseEstimator):
 
     def predict(self, X, M=None, info=False):
         """
-        Performs the COBRA aggregation scheme for a single input vector X.
+        Performs the COBRA aggregation scheme, calls pred.
         
         Parameters
         ----------
@@ -186,7 +192,7 @@ class Cobra(BaseEstimator):
 
         Returns
         -------
-        avg: prediction
+        result: prediction
 
         """
 

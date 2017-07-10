@@ -1,19 +1,9 @@
-# language: python
-# sudo: false
-# cache: pip
-# python:
-#   - "2.7"
-#   - "3.4"
-# before_install:
-#   - pip install --upgrade pip
-#   - pip install wheel
-#   - pip install numpy scipy scikit-learn matplotlib
-# script: python setup.py test
 language: python
 python:
   - "2.7"
   - "3.6"
 # command to install dependencies
-install: "pip install -r requirements.txt"
+install: 
+  - pip install numpy scipy scikit-learn matplotlib
 # command to run tests
 script: nosetests

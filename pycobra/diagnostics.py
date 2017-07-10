@@ -29,6 +29,10 @@ class Diagnostics():
         
         load_MSE: bool, optional
             loads MSE and error bound values into diagnostics object.
+
+        random_state: integer or a numpy.random.RandomState object. 
+            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
+            reproducibility of your experiments, for example.
         """
         self.cobra = cobra
         # X_test and y_test is only to compare MSEs of machines.
