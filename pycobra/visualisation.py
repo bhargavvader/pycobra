@@ -13,6 +13,7 @@ from sklearn.metrics import mean_squared_error
 
 from pycobra.diagnostics import Diagnostics
 from pycobra.cobra import Cobra
+from pycobra.ewa import Ewa
 
 from collections import OrderedDict
 
@@ -217,12 +218,12 @@ class Visualisation():
     Plots and visualisations of cobra.
     If X_test and y_test is loaded, you can run the plotting functions with no parameters.
     """
-    def __init__ (self, cobra, X_test, y_test, plot_size=8, random_state=None):
+    def __init__ (self, aggregate, X_test, y_test, plot_size=8, random_state=None):
         """
         Parameters
         ----------
-        cobra: pycobra.cobra.Cobra object
-            cobra object on which we want to run our analysis on.
+        aggregate: pycobra.cobra.Cobra or pycobra.cobra.Ewa object
+            aggregate on which we want to run our analysis on.
 
         X_test : array-like, shape = [n_samples, n_features].
             Testing data.
@@ -234,20 +235,25 @@ class Visualisation():
             Size of matplotlib plots.
 
         """
-        self.cobra = cobra
+        self.aggregate = aggregate
         self.X_test = X_test
         self.y_test = y_test
         self.plot_size = plot_size
 
         # load results so plotting doesn't need parameters
         self.machine_test_results = {}
-        self.machine_test_results["COBRA"] = self.cobra.predict(self.X_test)        
-        for machine in self.cobra.machines:
-            self.machine_test_results[machine] = self.cobra.machines[machine].predict(self.X_test)
+        if type(aggregate) is Cobra:
+            self.machine_test_results["COBRA"] = self.aggregate.predict(self.X_test)
+
+        if type(aggregate) is Ewa:
+            self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
+
+        for machine in self.aggregate.machines:
+            self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
         
         self.random_state = random_state
         if self.random_state is None:
-            self.random_state = self.cobra.random_state
+            self.random_state = self.aggregate.random_state
 
 
     def plot_machines(self, machines=None):
@@ -315,8 +321,8 @@ class Visualisation():
         
         Parameters
         ----------
-        machine: string, optional
-            Name of machine to perform boxplot.
+        machines: list, optional
+            List of machines to plot boxplots of.
         """
 
         if machines is None:
@@ -361,7 +367,7 @@ class Visualisation():
         indice = 0
         indice_info = {}
         MSE = {}
-        cobra_diagnostics = Diagnostics(cobra=self.cobra, random_state=self.random_state)
+        cobra_diagnostics = Diagnostics(cobra=self.aggregate, random_state=self.random_state)
         if epsilon is None:
             for data_point, response in zip(X_test, y_test):
                 info = cobra_diagnostics.optimal_machines_grid(data_point, response, line_points=line_points)
@@ -477,9 +483,9 @@ class Visualisation():
             shaded according to the mean-squared error of that "region"
 
         machine_colors: dictionary, optional
-            Depending on the kind of coloring, a dictionary mapping machines to colors.
-            
+            Depending on the kind of coloring, a dictionary mapping machines to colors. 
         """
+
         if X_test is None:
             X_test = self.X_test  
         if y_test is None:
@@ -553,3 +559,4 @@ class Visualisation():
             plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
             return vor
+
