@@ -2,10 +2,10 @@
 
 ## pycobra
 
-pycobra is a python library which implements Predictor Aggregation techniques and analysis of estimators. It is scikit-learn compatible and fits into the existing scikit-learn eco-system. 
+pycobra is a python library which serves as a toolkit for regression, prediction and visualisation. In particular, pycobra implements aggregation (a.k.a ensemble) techniques. It is scikit-learn compatible and fits into the existing scikit-learn eco-system.
 
 pycobra offers a python implementation of the COBRA algorithm described in the [paper](http://www.sciencedirect.com/science/article/pii/S0047259X15000950) by Biau, Fischer, Guedj and Malley [2016], COBRA: A combined regression strategy, Journal of Multivariate Analysis. 
-The other algorithm implemented is the technique described in the [paper](http://www.crest.fr/ckfinder/userfiles/files/pageperso/tsybakov/DTcolt2007.pdf) by A. Dalalyan and A.B. Tsybakov, which we will refer to as the Ewa aggregate (Exponentially Weighted Average aggregate). 
+Another algorithm implemented is the EWA (Exponentially Weighted Aggregate) (among several other references, you can check the [paper](http://www.crest.fr/ckfinder/userfiles/files/pageperso/tsybakov/DTcolt2007.pdf) - Aggregation by exponential weighting and sharp oracle inequalities by Dalalyan and Tsybakov.).
 
 pycobra also offers various visualisation and diagnostic methods built on top of matplotlib which lets the user analyse and compare different regression machines with COBRA. 
 The Visualisation class also lets you use some of the tools (such as Voronoi Tesselations) on other visualisation problems, such as clustering.
