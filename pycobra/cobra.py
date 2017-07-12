@@ -19,9 +19,9 @@ logger = logging.getLogger('pycobra.cobra')
 
 class Cobra(BaseEstimator):
     """
-    COBRA - Nonlinear Aggregation of Predictors.
+    COBRA: A combined regression strategy
     
-    Based on the paper by Biau, Guedj et al [2016], this is a pythonic implementation of the original COBRA code.
+    Based on the paper by Biau, Fischer, Guedj, Malley [2016], this is a pythonic implementation of the original COBRA code.
     """
     def __init__(self, random_state=None):
         """
@@ -33,18 +33,16 @@ class Cobra(BaseEstimator):
             
         Attributes
         ----------
-        
         machines: A dictionary which maps machine names to the machine objects.
                 The machine object must have a predict method for it to be used during aggregation.
-
         machine_predictions: A dictionary which maps machine name to it's predictions over X_l
                 This value is used to determine which points from y_l are used to aggregate.
         
         all_predictions: numpy array with all the predictions, to be used for epsilon manipulation.
-
         """
         self.machines = {}
         self.random_state = random_state
+
 
     def fit(self, X, y, default=True, epsilon=None, X_k=None, X_l=None, y_k=None, y_l=None, X_epsilon=None, y_epsilon=None, line_points=80):
         """
@@ -111,6 +109,7 @@ class Cobra(BaseEstimator):
 
         return self
 
+
     def pred(self, X, M, info=False):
         """
         Performs the COBRA aggregation scheme, used in predict method.
@@ -176,6 +175,7 @@ class Cobra(BaseEstimator):
             return avg, points
         return avg
 
+
     def predict(self, X, M=None, info=False):
         """
         Performs the COBRA aggregation scheme, calls pred.
@@ -238,8 +238,9 @@ class Cobra(BaseEstimator):
         shuffle: bool, optional
             Boolean value to decide to shuffle the data before splitting.
 
-        random_state: numpy random_state object or int
-            Random seed if shuffling.
+        Returns
+        -------
+        self : returns an instance of self.
         """
 
         if shuffle_data:
@@ -254,6 +255,8 @@ class Cobra(BaseEstimator):
         self.y_k = self.y[:k]
         self.y_l = self.y[k:l]
 
+        return self
+
 
     def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
         """
@@ -263,7 +266,9 @@ class Cobra(BaseEstimator):
         ----------
         machine_list: optional, list of strings
             List of default machine names to be loaded. 
-
+        Returns
+        -------
+        self : returns an instance of self.
         """
         for machine in machine_list:
             if machine == 'lasso':
@@ -274,6 +279,8 @@ class Cobra(BaseEstimator):
                 self.machines['ridge'] = linear_model.RidgeCV().fit(self.X_k, self.y_k)
             if machine == 'random_forest':
                 self.machines['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k, self.y_k)
+
+        return self
 
 
     def load_machine(self, machine_name, machine):
@@ -296,6 +303,7 @@ class Cobra(BaseEstimator):
         """
         
         self.machines[machine_name] = machine
+
         return self
 
 
@@ -306,10 +314,12 @@ class Cobra(BaseEstimator):
 
         Parameters
         ----------        
-
         predictions: dictionary, optional
             A pre-existing machine:predictions dictionary can also be loaded.
-
+        
+        Returns
+        -------
+        self : returns an instance of self.
         """
         self.machine_predictions= {}
         self.all_predictions = np.array([])
@@ -322,4 +332,4 @@ class Cobra(BaseEstimator):
         if predictions is not None:
             self.machine_predictions = predictions
 
-
+        return self

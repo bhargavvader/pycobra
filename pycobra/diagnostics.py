@@ -50,6 +50,11 @@ class Diagnostics():
     def load_MSE(self):
         """
         Computes MSE and error bound for each Machine based on test data.
+        
+        Returns
+        -------
+        self : returns an instance of self.
+
         """
         self.machine_test_results = {}
         self.machine_MSE = {}
@@ -67,6 +72,8 @@ class Diagnostics():
         power = - 2 / (len(self.cobra.machines) + 2)
         self.error_bound = math.pow(len(self.cobra.X_l), power) 
 
+        return self
+
 
     def optimal_alpha(self, X, y, single=False, epsilon=None, info=False):
         """
@@ -75,10 +82,10 @@ class Diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want optimal alpha values
         
-        y_test: float
+        y: float
             Target value for query to compare.
          
         single: boolean, optional
@@ -125,10 +132,10 @@ class Diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want optimal machine combinations.
         
-        y_test: float
+        y: float
             Target value for query to compare.
          
         single: boolean, optional
@@ -181,10 +188,10 @@ class Diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want for optimal epsilon.
         
-        y_test: float
+        y: float
             Target value for query to compare.
 
         line_points: integer, optional
@@ -290,10 +297,10 @@ class Diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want optimal alpha and epsilon values
         
-        y_test: float
+        y: float
             Target value for query to compare.
          
         line_points: integer, optional
@@ -341,10 +348,10 @@ class Diagnostics():
         Parameteres
         -----------
 
-        X_test: array-like, [n_features]
+        X: array-like, [n_features]
             Vector for which we want optimal machines and epsilon values
         
-        y_test: float
+        y: float
             Target value for query to compare.
          
         line_points: integer, optional

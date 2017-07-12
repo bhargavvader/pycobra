@@ -4,6 +4,8 @@ import unittest
 import numpy as np
 
 from pycobra.cobra import Cobra
+from pycobra.ewa import Ewa
+
 import logging
 
 class TestPrediction(unittest.TestCase):
@@ -27,17 +29,25 @@ class TestPrediction(unittest.TestCase):
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
         Y_eps = Y[D1 + D2:D1 + D2 + D3]
 
-        COBRA = Cobra(random_state=0)
-        COBRA.fit(X_train, Y_train, epsilon = 0.5)
-        self.test_data = X_test
-        self.eps_data = X_eps
-        self.cobra = COBRA
+        cobra = Cobra(random_state=0)
+        cobra.fit(X_train, Y_train, epsilon = 0.5)
+        
+        ewa = Ewa(random_state=0)
+        ewa.fit(X_train, Y_train)
 
-    def test_predict(self):
+        self.test_data = X_test
+        self.cobra = cobra
+        self.ewa = ewa
+
+    def test_cobra_predict(self):
         expected = 2.7310842344617035
         result = self.cobra.predict(self.test_data[0].reshape(1, -1))
         self.assertAlmostEqual(expected, result)
 
+    def test_ewa_predict(self):
+        expected = 2.77124764
+        result = self.ewa.predict(self.test_data[0].reshape(1, -1))
+        self.assertAlmostEqual(expected, result[0])        
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
