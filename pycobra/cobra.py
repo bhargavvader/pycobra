@@ -19,8 +19,7 @@ logger = logging.getLogger('pycobra.cobra')
 
 class Cobra(BaseEstimator):
     """
-    COBRA: A combined regression strategy
-    
+    COBRA: A combined regression strategy. 
     Based on the paper by Biau, Fischer, Guedj, Malley [2016], this is a pythonic implementation of the original COBRA code.
     """
     def __init__(self, random_state=None):
@@ -97,7 +96,7 @@ class Cobra(BaseEstimator):
         # auto epsilon
         if self.epsilon is None and X_epsilon is not None:
             from pycobra.diagnostics import Diagnostics
-            cobra_diagnostics = Diagnostics(cobra=self)
+            cobra_diagnostics = Diagnostics(aggregate=self)
             self.epsilon = cobra_diagnostics.optimal_epsilon(X_epsilon, y_epsilon, line_points=line_points)[0]
         
         if self.epsilon is None:

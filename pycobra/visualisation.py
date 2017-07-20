@@ -9,11 +9,12 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import random
 from scipy.spatial import Voronoi, voronoi_plot_2d
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, accuracy_score
 
 from pycobra.diagnostics import Diagnostics
 from pycobra.cobra import Cobra
 from pycobra.ewa import Ewa
+from pycobra.classifiercobra import ClassifierCobra
 
 from collections import OrderedDict
 
@@ -247,6 +248,9 @@ class Visualisation():
 
         if type(aggregate) is Ewa:
             self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
+        
+        if type(aggregate) is ClassifierCobra:        
+            self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
 
         for machine in self.aggregate.machines:
             self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
@@ -325,17 +329,31 @@ class Visualisation():
             List of machines to plot boxplots of.
         """
 
-        if machines is None:
-            machines = self.machine_test_results.keys()
+        if type(self.aggregate) is Ewa or type(self.aggregate) is Cobra:
+            if machines is None:
+                machines = self.machine_test_results.keys()
 
-        plt.figure(figsize=(self.plot_size, self.plot_size))
+            plt.figure(figsize=(self.plot_size, self.plot_size))
 
-        data = []
-        for machine in machines:
-            data.append(self.machine_test_results[machine])
+            data = []
+            for machine in machines:
+                data.append(self.machine_test_results[machine])
 
-        plt.boxplot(data, labels=machines)
-        plt.show()
+            plt.boxplot(data, labels=machines)
+            plt.show()
+
+        if type(self.aggregate) is ClassifierCobra:
+            if machines is None:
+                machines = self.machine_test_results.keys()
+
+            plt.figure(figsize=(self.plot_size, self.plot_size))
+
+            data = []
+            for machine in machines:
+                data.append([accuracy_score(self.y_test, self.machine_test_results[machine])])
+
+            plt.boxplot(data, labels=machines)
+            plt.show()
 
 
     def indice_info(self, X_test=None, y_test=None, epsilon=None, line_points=200):
@@ -367,7 +385,7 @@ class Visualisation():
         indice = 0
         indice_info = {}
         MSE = {}
-        cobra_diagnostics = Diagnostics(cobra=self.aggregate, random_state=self.random_state)
+        cobra_diagnostics = Diagnostics(aggregate=self.aggregate, random_state=self.random_state)
         if epsilon is None:
             for data_point, response in zip(X_test, y_test):
                 info = cobra_diagnostics.optimal_machines_grid(data_point, response, line_points=line_points)

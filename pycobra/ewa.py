@@ -7,6 +7,7 @@ from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
 
 import math
 import numpy as np
@@ -36,7 +37,7 @@ class Ewa(BaseEstimator):
         self.random_state = random_state
 
 
-    def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None, beta=1.0):
+    def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None, beta=None, X_beta=None, y_beta=None, betas=None):
         """
         Parameters
         ----------
@@ -70,13 +71,23 @@ class Ewa(BaseEstimator):
         self.X_l = X_l
         self.y_k = y_k
         self.y_l = y_l
+        self.beta = beta
+
+        if self.beta is None and X_beta is not None:
+            from pycobra.diagnostics import Diagnostics
+            ewa_diagnostics = Diagnostics(aggregate=self)
+            self.beta = ewa_diagnostics.optimal_beta(X_beta, y_beta, betas=betas)[0]
+
+        # if no data passed, beta is set as default as 1.0
+        if self.beta is None:
+            self.beta = 1.0
 
         # set-up Ewa with default machines
         if default:
             self.split_data()
             self.load_default()
-            self.load_machine_weights(beta)
-        # auto epsilon
+            self.load_machine_weights(self.beta)
+
         return self
 
 
@@ -172,7 +183,7 @@ class Ewa(BaseEstimator):
         self.machine_weight = {}
         for machine in self.machines:
             self.machine_MSE[machine] = mean_squared_error(self.y_l, self.machines[machine].predict(self.X_l))
-            self.machine_weight[machine] = np.exp((- len(self.y_l) * self.machine_MSE[machine]) / (beta) )
+            self.machine_weight[machine] = np.exp(beta * self.machine_MSE[machine])
 
         normalise = sum(self.machine_weight.values(), 0.0)
         self.machine_weight = {k: v / normalise for k, v in self.machine_weight.items() }
@@ -194,4 +205,12 @@ class Ewa(BaseEstimator):
 
         return result
 
+    def plot_machine_weights(self, figsize=8):
+        """
+        Plot each machine weights
+        """
 
+        plt.bar(range(len(self.machine_weight)), self.machine_weight.values(), align='center')
+        plt.xticks(range(len(self.machine_weight)), self.machine_weight.keys())
+
+        plt.show()
