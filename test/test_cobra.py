@@ -23,11 +23,9 @@ class TestPrediction(unittest.TestCase):
         # training data-set
         X_train = X[:D1 + D2]
         X_test = X[D1 + D2 + D3:D1 + D2 + D3 + D4]
-        X_eps = X[D1 + D2:D1 + D2 + D3]
         # for testing
         Y_train = Y[:D1 + D2]
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
-        Y_eps = Y[D1 + D2:D1 + D2 + D3]
 
         cobra = Cobra(random_state=0)
         cobra.fit(X_train, Y_train, epsilon = 0.5)
@@ -45,9 +43,10 @@ class TestPrediction(unittest.TestCase):
         self.assertAlmostEqual(expected, result)
 
     def test_ewa_predict(self):
-        expected = 2.77124764
+        expected = 2.7716310515173239
         result = self.ewa.predict(self.test_data[0].reshape(1, -1))
         self.assertAlmostEqual(expected, result[0])        
+
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)

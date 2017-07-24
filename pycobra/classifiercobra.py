@@ -19,7 +19,6 @@ logger = logging.getLogger('pycobra.classifiercobra')
 class ClassifierCobra(BaseEstimator):
     """
     Classification algorithm as described by MOJIRSHEIBANI [1999] Combining Classifiers via Discretization, Journal of the American Statistical Association.
-    ClassifierCobra cannot be used with the Diagnostics or Visualisation classes.
     """
     def __init__(self, random_state=None):
         """
@@ -44,6 +43,10 @@ class ClassifierCobra(BaseEstimator):
         """
         Parameters
         ----------
+        X: array-like, [n_samples, n_features]
+            Training data which will be used to create ClassifierCobra.
+        
+        y: array-like [n_samples]
         default: bool, optional
             If set as true then sets up COBRA with default machines and splitting.
 
