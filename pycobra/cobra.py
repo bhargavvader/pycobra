@@ -1,6 +1,6 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
-from sklearn import linear_model 
+from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import shuffle
@@ -19,17 +19,17 @@ logger = logging.getLogger('pycobra.cobra')
 
 class Cobra(BaseEstimator):
     """
-    COBRA: A combined regression strategy. 
+    COBRA: A combined regression strategy.
     Based on the paper by Biau, Fischer, Guedj, Malley [2016], this is a pythonic implementation of the original COBRA code.
     """
     def __init__(self, random_state=None):
         """
         Parameters
         ----------
-        random_state: integer or a numpy.random.RandomState object. 
+        random_state: integer or a numpy.random.RandomState object.
             Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
             reproducibility of your experiments, for example.
-            
+
         Attributes
         ----------
         machines: A dictionary which maps machine names to the machine objects.
@@ -320,7 +320,7 @@ class Cobra(BaseEstimator):
         -------
         self : returns an instance of self.
         """
-        self.machine_predictions= {}
+        self.machine_predictions = {}
         self.all_predictions = np.array([])
         if predictions is None:
             for machine in self.machines:

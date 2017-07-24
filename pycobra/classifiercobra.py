@@ -47,6 +47,8 @@ class ClassifierCobra(BaseEstimator):
             Training data which will be used to create ClassifierCobra.
         
         y: array-like [n_samples]
+            
+
         default: bool, optional
             If set as true then sets up COBRA with default machines and splitting.
 
@@ -294,7 +296,7 @@ class ClassifierCobra(BaseEstimator):
         -------
         self : returns an instance of self.
         """
-        self.machine_predictions= {}
+        self.machine_predictions = {}
         self.all_predictions = np.array([])
         if predictions is None:
             for machine in self.machines:
