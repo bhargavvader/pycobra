@@ -205,7 +205,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
         # sort region counterclockwise
         vs = np.asarray([new_vertices[v] for v in new_region])
         c = vs.mean(axis=0)
-        angles = np.arctan2(vs[:,1] - c[1], vs[:,0] - c[0])
+        angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
         new_region = np.array(new_region)[np.argsort(angles)]
 
         # finish
@@ -219,7 +219,7 @@ class Visualisation():
     Plots and visualisations of cobra.
     If X_test and y_test is loaded, you can run the plotting functions with no parameters.
     """
-    def __init__ (self, aggregate, X_test, y_test, plot_size=8, random_state=None):
+    def __init__(self, aggregate, X_test, y_test, plot_size=8, random_state=None):
         """
         Parameters
         ----------
@@ -566,7 +566,7 @@ class Visualisation():
 
                 ax.plot(X_test[:,0][indice], X_test[:,1][indice], 'ko')
                 polygon = vertices[region]
-                ax.fill(*zip(*polygon), alpha=0.2, color=machine_colors[indice_info[indice]], label= create_labels(indice_info[indice]))
+                ax.fill(*zip(*polygon), alpha=0.2, color=machine_colors[indice_info[indice]], label=create_labels(indice_info[indice]))
                 indice += 1
 
             ax.axis('equal')
@@ -577,4 +577,3 @@ class Visualisation():
             plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
             return vor
-
