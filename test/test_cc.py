@@ -20,7 +20,7 @@ class TestPrediction(unittest.TestCase):
 
     def test_cc_predict(self):
         expected = 1
-        result = self.cc.predict(self.test_data[0].reshape(1, -1)[0])
+        result = self.cc.predict(self.test_data[0].reshape(1, -1))
         self.assertEqual(expected, result)
 
 if __name__ == '__main__':
