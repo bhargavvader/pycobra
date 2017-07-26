@@ -216,7 +216,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
 class Visualisation():
     """
-    Plots and visualisations of cobra.
+    Plots and visualisations of COBRA aggregates.
     If X_test and y_test is loaded, you can run the plotting functions with no parameters.
     """
     def __init__(self, aggregate, X_test, y_test, plot_size=8, random_state=None):
@@ -290,12 +290,12 @@ class Visualisation():
 
     def QQ(self, machine="COBRA"):
         """
-        Plots the machine results vs the actual results in the form of a QQ plot.
+        Plots the machine results vs the actual results in the form of a QQ-plot.
         
         Parameters
         ----------
         machine: string, optional
-            Name of machine to perform QQ plot.
+            Name of machine to perform QQ-plot.
         """
         plt.figure(figsize=(self.plot_size, self.plot_size))
         axes = plt.gca()
@@ -326,7 +326,7 @@ class Visualisation():
         Parameters
         ----------
         machines: list, optional
-            List of machines to plot boxplots of.
+            List of machines to plot boxplots.
         """
 
         if type(self.aggregate) is Ewa or type(self.aggregate) is Cobra:

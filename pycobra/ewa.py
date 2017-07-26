@@ -42,24 +42,27 @@ class Ewa(BaseEstimator):
         Parameters
         ----------
         X: array-like, [n_features]
-            Training data which will be used to create the Ewa aggregate.
+            Training data which will be used to create the EWA aggregate.
+        
+        y: array-like, shape = [n_samples]
+            Target values used to train the machines used in the EWA aggregate. 
 
         default: bool, optional
-            If set as true then sets up Ewa with default machines and splitting.
+            If set as true then sets up EWA with default machines and splitting.
 
         X_k : shape = [n_samples, n_features]
             Training data which is used to train the machines loaded into Ewa. 
-            Can be loaded directly into Ewa; if not, the split_data method is used as default.
+            Can be loaded directly into EWA; if not, the split_data method is used as default.
 
         y_k : array-like, shape = [n_samples]
-            Target values used to train the machines loaded into Ewa.
+            Target values used to train the machines loaded into EWA.
 
         X_l : shape = [n_samples, n_features]
-            Training data which is used during the aggregation of Ewa.
-            Can be loaded directly into Ewa; if not, the split_data method is used as default.
+            Training data which is used during the aggregation of EWA.
+            Can be loaded directly into EWA; if not, the split_data method is used as default.
 
         y_l : array-like, shape = [n_samples] 
-            Target values which are actually used in the aggregation of Ewa.
+            Target values which are actually used in the aggregation of EWA.
         beta: float, optional
             Parameter to be passed when creating machine weights for EWA.
         """
@@ -93,19 +96,23 @@ class Ewa(BaseEstimator):
 
     def split_data(self, k=None, l=None, shuffle_data=False):
         """
-        Split the data into different parts for training machines, and for aggregation.
+        Split the data into different parts for training machines and for aggregation.
 
         Parameters
         ----------
         k : int, optional
-            k determines D_k, which is the data used to the train the machines.
+            k is the number of points used to train the machines. 
+            Those are the first k points of the data provided.
 
         l: int, optional
-            l determines D_l, which is the data used in the aggregation.
+            l is the number of points used to form the EWA aggregate. 
 
         shuffle: bool, optional
             Boolean value to decide to shuffle the data before splitting.
 
+        Returns
+        -------
+        self : returns an instance of self.
         """
 
         if shuffle_data:
@@ -115,10 +122,18 @@ class Ewa(BaseEstimator):
             k = int(len(self.X) / 2)
             l = int(len(self.X))
 
+        if k is not None and l is None:
+            l = len(self.X) - k
+
+        if l is not None and k is None:
+            k = len(self.X) - l
+
         self.X_k = self.X[:k]
         self.X_l = self.X[k:l]
         self.y_k = self.y[:k]
         self.y_l = self.y[k:l]
+
+        return self
 
 
     def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
@@ -169,11 +184,11 @@ class Ewa(BaseEstimator):
         """
         Loads the EWA weights for each machine based on the training data.
         Should be run after all the machines to be used for aggregation is loaded.
+        
         Parameters
         ----------
-        
         beta : float
-            Parameter which controls weights.
+            Inverse temperature parameter to form the weights.
 
         Returns
         -------
