@@ -26,8 +26,8 @@ class TestOptimal(unittest.TestCase):
         Y_train = Y[:D1 + D2]
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
 
-        COBRA = Cobra(random_state=0)
-        COBRA.fit(X_train, Y_train, epsilon = 0.5)
+        COBRA = Cobra(random_state=0, epsilon=0.5)
+        COBRA.fit(X_train, Y_train)
         self.test_data = X_test
         self.test_response = Y_test
         self.cobra = COBRA

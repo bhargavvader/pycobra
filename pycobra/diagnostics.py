@@ -16,7 +16,7 @@ logger = logging.getLogger('pycobra.diagnostics')
 
 class Diagnostics():
     """
-    Optimization of parameters, and error details. 
+    Optimization of hyperparameters, and error details. 
     """
     def __init__ (self, aggregate, X_test=None, y_test=None, load_MSE=True, random_state=None):
         """
@@ -43,7 +43,7 @@ class Diagnostics():
         self.X_test = X_test
         self.y_test = y_test
 
-        if load_MSE and X_test is not None:
+        if load_MSE and X_test is not None and type(self.aggregate) is not ClassifierCobra:
             self.load_MSE()
 
         if type(self.aggregate) is ClassifierCobra and load_MSE:
@@ -98,12 +98,12 @@ class Diagnostics():
         self.machine_error = {}
 
         self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
-        self.machine_error["ClassifierCobra"] = accuracy_score(self.y_test, self.machine_test_results["ClassifierCobra"])
+        self.machine_error["ClassifierCobra"] = 1 - accuracy_score(self.y_test, self.machine_test_results["ClassifierCobra"])
         
         for machine in self.aggregate.machines:
             self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
             # add MSE
-            self.machine_error[machine] = accuracy_score(self.y_test, self.machine_test_results[machine])
+            self.machine_error[machine] = 1 - accuracy_score(self.y_test, self.machine_test_results[machine])
 
     def optimal_alpha(self, X, y, single=False, epsilon=None, info=False):
         """
@@ -139,14 +139,14 @@ class Diagnostics():
 
         MSE = {}
         for alpha in range(1, len(self.aggregate.machines) + 1):
-            machine = Cobra(random_state=self.random_state)
-            machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon)
+            machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+            machine.fit(self.aggregate.X, self.aggregate.y)
             # for a single data point
             if single:
-                result = machine.predict(X, M=alpha) 
+                result = machine.predict(X, alpha=alpha) 
                 MSE[alpha] = np.square(y - result)
             else:
-                results = machine.predict(X, M=alpha)
+                results = machine.predict(X, alpha=alpha)
                 MSE[alpha] = (mean_squared_error(y, results))
 
         if info:
@@ -193,8 +193,8 @@ class Diagnostics():
             machine_names = self.aggregate.machines.keys()
             use = list(itertools.combinations(machine_names, num))
             for combination in use:
-                machine = Cobra(random_state=self.random_state)
-                machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon, default=False)
+                machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+                machine.fit(self.aggregate.X, self.aggregate.y, default=False)
                 machine.split_data()
                 machine.load_default(machine_list=combination)
                 machine.load_machine_predictions() 
@@ -246,8 +246,8 @@ class Diagnostics():
 
         MSE = {}
         for epsilon in erange:
-            machine = Cobra(random_state=self.random_state)
-            machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon)
+            machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+            machine.fit(self.aggregate.X, self.aggregate.y)
             results = machine.predict(X)
             MSE[epsilon] = (mean_squared_error(y, results))
 
@@ -298,8 +298,8 @@ class Diagnostics():
 
         MSE = {}
         for k, l in split:
-            machine = Cobra(random_state=self.random_state)
-            machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon, default=False)
+            machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+            machine.fit(self.aggregate.X, self.aggregate.y, default=False)
             machine.split_data(int(k * len(self.aggregate.X)), int((k + l) * len(self.aggregate.X)))
             machine.load_default()
             machine.load_machine_predictions() 
@@ -359,9 +359,9 @@ class Diagnostics():
         # looping over epsilon and alpha values
         for epsilon in erange:
             for num in n_machines:
-                machine = Cobra(random_state=self.random_state)
-                machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon)
-                result = machine.predict(X.reshape(1, -1), M=num)
+                machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+                machine.fit(self.aggregate.X, self.aggregate.y)
+                result = machine.predict(X.reshape(1, -1), alpha=num)
                 MSE[(num, epsilon)] = np.square(y - result)
     
         if info:
@@ -412,8 +412,8 @@ class Diagnostics():
                 machine_names = self.aggregate.machines.keys()
                 use = list(itertools.combinations(machine_names, num))
                 for combination in use:
-                    machine = Cobra(random_state=self.random_state)
-                    machine.fit(self.aggregate.X, self.aggregate.y, epsilon=epsilon, default=False)
+                    machine = Cobra(random_state=self.random_state, epsilon=epsilon)
+                    machine.fit(self.aggregate.X, self.aggregate.y, default=False)
                     machine.split_data()
                     machine.load_default(machine_list=combination)
                     machine.load_machine_predictions() 
@@ -457,8 +457,8 @@ class Diagnostics():
             
         MSE = {}
         for beta in betas:
-            machine = Ewa(random_state=self.random_state)
-            machine.fit(self.aggregate.X, self.aggregate.y, beta=beta)
+            machine = Ewa(random_state=self.random_state, beta=beta)
+            machine.fit(self.aggregate.X, self.aggregate.y)
             results = machine.predict(X)
             MSE[beta] = (mean_squared_error(y, results))
 

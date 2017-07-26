@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.model_selection import GridSearchCV
 
 import math
 import numpy as np
@@ -22,14 +23,28 @@ class Cobra(BaseEstimator):
     COBRA: A combined regression strategy.
     Based on the paper by Biau, Fischer, Guedj, Malley [2016], this is a pythonic implementation of the original COBRA code.
     """
-    def __init__(self, random_state=None):
+    def __init__(self, random_state=None, epsilon=None, X_epsilon=None, y_epsilon=None, grid_points=None):
         """
         Parameters
         ----------
         random_state: integer or a numpy.random.RandomState object.
             Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
             reproducibility of your experiments, for example.
+        
+        epsilon: float, optional
+            Epsilon value described in the paper which determines which points are selected for the aggregate.
+            Default value is determined by optimizing over a grid if test data is provided.
+            If not, a mean of the possible distances is chosen.
 
+        X_epsilon : shape = [n_samples, n_features]
+            Used if no epsilon is passed to find the optimal epsilon for data passed.
+
+        y_epsilon : array-like, shape = [n_samples]
+            Used if no epsilon is passed to find the optimal epsilon for data passed.
+
+        grid_points: int, optional
+            If no epsilon value is passed, this parameter controls how many points on the grid to traverse.
+        
         Attributes
         ----------
         machines: A dictionary which maps machine names to the machine objects.
@@ -41,9 +56,27 @@ class Cobra(BaseEstimator):
         """
         self.machines = {}
         self.random_state = random_state
+        self.epsilon = epsilon
+        
+        # if no epsilon value is passed, we set up COBRA to perform CV and find an optimal epsilon.
+        if epsilon is None and X_epsilon is not None:
+            self.X = X_epsilon
+            self.y = y_epsilon
+            self.split_data()
+            self.load_default()
+            self.load_machine_predictions()
+            a, size = sorted(self.all_predictions), len(self.all_predictions)
+            res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
+            emin = min(res)
+            emax = max(a) - min(a)
+            erange = np.linspace(emin, emax, grid_points)
+            tuned_parameters = [{'epsilon': erange}]
+            clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
+            clf.fit(X_epsilon, y_epsilon)
+            self.epsilon = clf.best_params_["epsilon"]
+            self.machines, self.machine_predictions = {}, {}
 
-
-    def fit(self, X, y, default=True, epsilon=None, X_k=None, X_l=None, y_k=None, y_l=None, X_epsilon=None, y_epsilon=None, line_points=80):
+    def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
         Parameters
         ----------
@@ -52,11 +85,6 @@ class Cobra(BaseEstimator):
         
         y: array-like, shape = [n_samples]
             Target values used to train the machines used in the aggregation. 
-                  
-        epsilon: float, optional
-            Epsilon value described in the paper which determines which points are selected for the aggregate.
-            Default value is determined by optimizing over a grid if test data is provided.
-            If not, a mean of the possible distances is chosen.
         
         default: bool, optional
             If set as true then sets up COBRA with default machines and splitting.
@@ -74,9 +102,6 @@ class Cobra(BaseEstimator):
 
         y_l : array-like, shape = [n_samples] 
             Target values which are actually used to form the aggregate.
-
-        line_points: integer, optional
-            Number of epsilon values to traverse the grid if epsilon is not passed.
         """
 
         X, y = check_X_y(X, y)
@@ -86,30 +111,17 @@ class Cobra(BaseEstimator):
         self.X_l = X_l
         self.y_k = y_k
         self.y_l = y_l
-        self.epsilon = epsilon
 
         # set-up COBRA with default machines
         if default:
             self.split_data()
             self.load_default()
             self.load_machine_predictions()
-        # auto epsilon
-        if self.epsilon is None and X_epsilon is not None:
-            from pycobra.diagnostics import Diagnostics
-            cobra_diagnostics = Diagnostics(aggregate=self)
-            self.epsilon = cobra_diagnostics.optimal_epsilon(X_epsilon, y_epsilon, line_points=line_points)[0]
-        
-        if self.epsilon is None:
-            a, size = sorted(self.all_predictions), len(self.all_predictions)
-            res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
-            emin = min(res)
-            emax = max(a) - min(a)
-            self.epsilon = (emin + emax) / 2
 
         return self
 
 
-    def pred(self, X, M, info=False):
+    def pred(self, X, alpha, info=False):
         """
         Performs the COBRA aggregation scheme, used in predict method.
         
@@ -117,8 +129,8 @@ class Cobra(BaseEstimator):
         ----------
         X: array-like, [n_features]
 
-        M: int, optional
-            M refers to the number of machines the prediction must be close to to be considered during aggregation.
+        alpha: int, optional
+            alpha refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -154,7 +166,7 @@ class Cobra(BaseEstimator):
             for machine in select:
                 if count in select[machine]:
                     row_check += 1
-            if row_check == M:
+            if row_check == alpha:
                 points.append(count)    
         
         # if no points are selected, return 0
@@ -175,7 +187,7 @@ class Cobra(BaseEstimator):
         return avg
 
 
-    def predict(self, X, M=None, info=False):
+    def predict(self, X, alpha=None, info=False):
         """
         Performs the COBRA aggregation scheme, calls pred.
         
@@ -183,8 +195,8 @@ class Cobra(BaseEstimator):
         ----------
         X: array-like, [n_features]
 
-        M: int, optional
-            M refers to the number of machines the prediction must be close to to be considered during aggregation.
+        alpha: int, optional
+            alpha refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -195,24 +207,24 @@ class Cobra(BaseEstimator):
 
         """
 
-        # sets M as the total number of machines as a default value
+        # sets alpha as the total number of machines as a default value
 
         X = check_array(X)
 
-        if M is None:
-            M = len(self.machines)
+        if alpha is None:
+            alpha = len(self.machines)
         if X.ndim == 1:
-            return self.pred(X.reshape(1, -1), info=info, M=M)
+            return self.pred(X.reshape(1, -1), info=info, alpha=alpha)
 
         result = np.zeros(len(X))
         avg_points = 0
         index = 0
         for vector in X:
             if info:
-                result[index], points = self.pred(vector.reshape(1, -1), info=info, M=M)
+                result[index], points = self.pred(vector.reshape(1, -1), info=info, alpha=alpha)
                 avg_points += len(points)
             else:
-                result[index] = self.pred(vector.reshape(1, -1), info=info, M=M)              
+                result[index] = self.pred(vector.reshape(1, -1), info=info, alpha=alpha)              
             index += 1
 
         if info:

@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 import random
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.metrics import mean_squared_error, accuracy_score
+from sklearn.utils import shuffle
 
 from pycobra.diagnostics import Diagnostics
 from pycobra.cobra import Cobra
@@ -319,42 +320,74 @@ class Visualisation():
         plt.show()
 
 
-    def boxplot(self, machines=None):
+    def boxplot(self, reps=100):
         """
         Plots boxplots of machines.
-        
+
         Parameters
         ----------
-        machines: list, optional
-            List of machines to plot boxplots.
+        reps: int, optional
+            Number of times to repeat experiments for boxplot.
+
         """
+        if type(self.aggregate) is Cobra:
+            
+            MSE = {k: [] for k, v in self.aggregate.machines.items()}
+            MSE["COBRA"] = []
+            for i in range(0, reps):
+                cobra = Cobra(random_state=self.random_state, epsilon=self.aggregate.epsilon)
+                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                cobra.fit(X, y)
+                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                for machine in cobra.machines:                
+                   MSE[machine].append(mean_squared_error(y_test, cobra.machines[machine].predict(X_test)))
+                MSE["COBRA"].append(mean_squared_error(y_test, cobra.predict(X_test)))
 
-        if type(self.aggregate) is Ewa or type(self.aggregate) is Cobra:
-            if machines is None:
-                machines = self.machine_test_results.keys()
+            data, labels = [], []
+            for machine in MSE:
+                data.append(MSE[machine])
+                labels.append(machine)
+        
+        if type(self.aggregate) is Ewa:
+            
+            MSE = {k: [] for k, v in self.aggregate.machines.items()}
+            MSE["EWA"] = []
+            for i in range(0, reps):
+                ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
+                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                ewa.fit(X, y)
+                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                for machine in ewa.machines:                
+                   MSE[machine].append(mean_squared_error(y_test, ewa.machines[machine].predict(X_test)))
+                MSE["EWA"].append(mean_squared_error(y_test, ewa.predict(X_test)))
 
-            plt.figure(figsize=(self.plot_size, self.plot_size))
-
-            data = []
-            for machine in machines:
-                data.append(self.machine_test_results[machine])
-
-            plt.boxplot(data, labels=machines)
-            plt.show()
+            data, labels = [], []
+            for machine in MSE:
+                data.append(MSE[machine])
+                labels.append(machine)
 
         if type(self.aggregate) is ClassifierCobra:
-            if machines is None:
-                machines = self.machine_test_results.keys()
+            
+            errors = {k: [] for k, v in self.aggregate.machines.items()}
+            errors["ClassifierCobra"] = []
+            for i in range(0, reps):
+                cc = ClassifierCobra(random_state=self.random_state)
+                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                cc.fit(X, y)
+                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                for machine in cc.machines:                
+                   errors[machine].append(1 - accuracy_score(y_test, cc.machines[machine].predict(X_test)))
+                errors["ClassifierCobra"].append(1 - accuracy_score(y_test, cc.predict(X_test)))
 
-            plt.figure(figsize=(self.plot_size, self.plot_size))
+            data, labels = [], []
+            for machine in errors:
+                data.append(errors[machine])
+                labels.append(machine)
 
-            data = []
-            for machine in machines:
-                data.append([accuracy_score(self.y_test, self.machine_test_results[machine])])
 
-            plt.boxplot(data, labels=machines)
-            plt.show()
-
+        plt.figure(figsize=(self.plot_size, self.plot_size))
+        plt.boxplot(data, labels=labels)
+        plt.show()
 
     def indice_info(self, X_test=None, y_test=None, epsilon=None, line_points=200):
         """
