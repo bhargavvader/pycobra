@@ -7,6 +7,8 @@ from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import GridSearchCV
+
 import matplotlib.pyplot as plt
 
 import math
@@ -18,14 +20,27 @@ class Ewa(BaseEstimator):
     """
     Exponential Weighted Average aggregation method.
     """
-    def __init__(self, random_state=None):
+    def __init__(self, random_state=None, beta=None, X_beta=None, y_beta=None, betas=None):
         """
         Parameters
         ----------
         random_state: integer or a numpy.random.RandomState object. 
             Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
             reproducibility of your experiments, for example.
-            
+        
+        beta: float, optional
+            Parameter to be passed when creating machine weights for EWA.
+        
+        betas: list, optional
+            List of betas to find optimal beta for weights
+        
+        X_beta : shape = [n_samples, n_features]
+            Used if no beta is passed to find the optimal beta for data passed.
+
+        y_beta : array-like, shape = [n_samples]
+            Used if no beta is passed to find the optimal beta for data passed.
+
+
         Attributes
         ----------
         
@@ -35,9 +50,17 @@ class Ewa(BaseEstimator):
         """
         self.machines = {}
         self.random_state = random_state
-
-
-    def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None, beta=None, X_beta=None, y_beta=None, betas=None):
+        self.beta = beta
+        
+        if self.beta is None and X_beta is not None:
+            if betas is None:
+                betas = [0.1, 0.2, 0.5, 1]                
+            tuned_parameters = [{'beta': betas}]
+            clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
+            clf.fit(X_beta, y_beta)
+            self.beta = clf.best_params_["beta"]     
+    
+    def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
         Parameters
         ----------
@@ -63,8 +86,7 @@ class Ewa(BaseEstimator):
 
         y_l : array-like, shape = [n_samples] 
             Target values which are actually used in the aggregation of EWA.
-        beta: float, optional
-            Parameter to be passed when creating machine weights for EWA.
+
         """
 
         X, y = check_X_y(X, y)
@@ -74,16 +96,6 @@ class Ewa(BaseEstimator):
         self.X_l = X_l
         self.y_k = y_k
         self.y_l = y_l
-        self.beta = beta
-
-        if self.beta is None and X_beta is not None:
-            from pycobra.diagnostics import Diagnostics
-            ewa_diagnostics = Diagnostics(aggregate=self)
-            self.beta = ewa_diagnostics.optimal_beta(X_beta, y_beta, betas=betas)[0]
-
-        # if no data passed, beta is set as default as 1.0
-        if self.beta is None:
-            self.beta = 1.0
 
         # set-up Ewa with default machines
         if default:
@@ -194,6 +206,10 @@ class Ewa(BaseEstimator):
         -------
         self : returns an instance of self.
         """
+
+        if self.beta is None:
+            beta = 1.0
+
         self.machine_MSE = {}
         self.machine_weight = {}
         for machine in self.machines:

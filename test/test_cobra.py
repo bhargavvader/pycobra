@@ -27,8 +27,8 @@ class TestPrediction(unittest.TestCase):
         Y_train = Y[:D1 + D2]
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
 
-        cobra = Cobra(random_state=0)
-        cobra.fit(X_train, Y_train, epsilon = 0.5)
+        cobra = Cobra(random_state=0, epsilon=0.5)
+        cobra.fit(X_train, Y_train)
         
         ewa = Ewa(random_state=0)
         ewa.fit(X_train, Y_train)

@@ -134,10 +134,10 @@ class ClassifierCobra(BaseEstimator):
         # if no points are selected, return 0
         if len(points) == 0:
             if info:
-                logger.info("No points were selected, prediction is null")
-                return (None, 0)
-            logger.info("No points were selected, prediction is null")
-            return None
+                logger.info("No points were selected, prediction is 0")
+                return (0, 0)
+            logger.info("No points were selected, prediction is 0")
+            return 0
 
         # aggregate
         classes = {}
