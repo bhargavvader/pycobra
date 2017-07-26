@@ -47,33 +47,33 @@ class Cobra(BaseEstimator):
         """
         Parameters
         ----------
+        X: array-like, [n_samples, n_features]
+            Training data which will be used to create the COBRA aggregate.
+        
+        y: array-like, shape = [n_samples]
+            Target values used to train the machines used in the aggregation. 
+                  
         epsilon: float, optional
             Epsilon value described in the paper which determines which points are selected for the aggregate.
-            Default value is determined by running a grid if test data is provided. 
+            Default value is determined by optimizing over a grid if test data is provided.
             If not, a mean of the possible distances is chosen.
         
         default: bool, optional
             If set as true then sets up COBRA with default machines and splitting.
 
         X_k : shape = [n_samples, n_features]
-            Training data which is used to train the machines loaded into COBRA. 
+            Training data which is used to train the machines used in the aggregation.
             Can be loaded directly into COBRA; if not, the split_data method is used as default.
 
         y_k : array-like, shape = [n_samples]
-            Target values used to train the machines loaded into COBRA.
+            Target values used to train the machines used in the aggregation.
 
         X_l : shape = [n_samples, n_features]
-            Training data which is used during the aggregation of COBRA.
+            Training data which is used to form the aggregate.
             Can be loaded directly into COBRA; if not, the split_data method is used as default.
 
         y_l : array-like, shape = [n_samples] 
-            Target values which are actually used in the aggregation of COBRA.
-
-        X_epsilon: shape = [n_samples, n_features]
-            Testing data used to determine optimal data-dependant epsilon value if it is not passed.
-
-        y_epsilon : array-like, shape = [n_samples] 
-            Target values used to determine optimal data-dependant epsilon value if it is not passed.
+            Target values which are actually used to form the aggregate.
 
         line_points: integer, optional
             Number of epsilon values to traverse the grid if epsilon is not passed.
@@ -118,7 +118,7 @@ class Cobra(BaseEstimator):
         X: array-like, [n_features]
 
         M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+            M refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -184,7 +184,7 @@ class Cobra(BaseEstimator):
         X: array-like, [n_features]
 
         M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+            M refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -224,15 +224,16 @@ class Cobra(BaseEstimator):
 
     def split_data(self, k=None, l=None, shuffle_data=False):
         """
-        Split the data into different parts for training machines, and for aggregation.
+        Split the data into different parts for training machines and for aggregation.
 
         Parameters
         ----------
         k : int, optional
-            k determines D_k, which is the data used to the train the machines.
+            k is the number of points used to train the machines. 
+            Those are the first k points of the data provided.
 
         l: int, optional
-            l determines D_l, which is the data used in the aggregation.
+            l is the number of points used to form the COBRA aggregate. 
 
         shuffle: bool, optional
             Boolean value to decide to shuffle the data before splitting.
@@ -248,6 +249,12 @@ class Cobra(BaseEstimator):
         if k is None and l is None:
             k = int(len(self.X) / 2)
             l = int(len(self.X))
+
+        if k is not None and l is None:
+            l = len(self.X) - k
+
+        if l is not None and k is None:
+            k = len(self.X) - l
 
         self.X_k = self.X[:k]
         self.X_l = self.X[k:l]
@@ -308,7 +315,7 @@ class Cobra(BaseEstimator):
 
     def load_machine_predictions(self, predictions=None):
         """
-        Stores the trained machines' predicitons on D_l in a dictionary, to be used for predictions.
+        Stores the trained machines' predicitons on training data in a dictionary, to be used for predictions.
         Should be run after all the machines to be used for aggregation is loaded.
 
         Parameters

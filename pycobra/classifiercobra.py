@@ -18,7 +18,7 @@ logger = logging.getLogger('pycobra.classifiercobra')
 
 class ClassifierCobra(BaseEstimator):
     """
-    Classification algorithm as described by MOJIRSHEIBANI [1999] Combining Classifiers via Discretization, Journal of the American Statistical Association.
+    Classification algorithm as introduced by Mojirsheibani [1999] Combining Classifiers via Discretization, Journal of the American Statistical Association.
     """
     def __init__(self, random_state=None):
         """
@@ -47,7 +47,7 @@ class ClassifierCobra(BaseEstimator):
             Training data which will be used to create ClassifierCobra.
         
         y: array-like [n_samples]
-            
+            Training labels for classification.
 
         default: bool, optional
             If set as true then sets up COBRA with default machines and splitting.
@@ -82,7 +82,6 @@ class ClassifierCobra(BaseEstimator):
                 self.split_data()
                 self.load_default()
                 self.load_machine_predictions()
-            # auto epsilon
         except ValueError:
             return self
 
@@ -91,14 +90,14 @@ class ClassifierCobra(BaseEstimator):
 
     def pred(self, X, M, info=False):
         """
-        Performs the COBRA aggregation scheme, used in predict method.
+        Performs the CLassififerCobra aggregation scheme, used in predict method.
         
         Parameters
         ----------
         X: array-like, [n_features]
 
         M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+            M refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -156,14 +155,15 @@ class ClassifierCobra(BaseEstimator):
 
     def predict(self, X, M=None, info=False):
         """
-        Performs the COBRA aggregation scheme, calls pred.
+        Performs the ClassifierCobra aggregation scheme, calls pred.
+        ClassifierCobra performs a majority vote among all points which are retained by the COBRA procedure.
         
         Parameters
         ----------
         X: array-like, [n_features]
 
         M: int, optional
-            M or alpha refers to the number of machines the prediction must be close to be considered during aggregation.
+            M refers to the number of machines the prediction must be close to to be considered during aggregation.
 
         info: boolean, optional
             If info is true the list of points selected in the aggregation is returned.
@@ -200,15 +200,16 @@ class ClassifierCobra(BaseEstimator):
 
     def split_data(self, k=None, l=None, shuffle_data=True):
         """
-        Split the data into different parts for training machines, and for aggregation.
+        Split the data into different parts for training machines and for aggregation.
 
         Parameters
         ----------
         k : int, optional
-            k determines D_k, which is the data used to the train the machines.
+            k is the number of points used to train the machines. 
+            Those are the first k points of the data provided.
 
         l: int, optional
-            l determines D_l, which is the data used in the aggregation.
+            l is the number of points used to form the ClassifierCobra aggregate. 
 
         shuffle: bool, optional
             Boolean value to decide to shuffle the data before splitting.
@@ -225,12 +226,19 @@ class ClassifierCobra(BaseEstimator):
             k = int(len(self.X) / 2)
             l = int(len(self.X))
 
+        if k is not None and l is None:
+            l = len(self.X) - k
+
+        if l is not None and k is None:
+            k = len(self.X) - l
+
         self.X_k = self.X[:k]
         self.X_l = self.X[k:l]
         self.y_k = self.y[:k]
         self.y_l = self.y[k:l]
 
         return self
+
 
 
     def load_default(self, machine_list=['sgd', 'tree', 'knn', 'svm']):
