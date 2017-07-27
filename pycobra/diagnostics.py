@@ -9,7 +9,6 @@ from pycobra.ewa import Ewa
 from pycobra.classifiercobra import ClassifierCobra
 
 import math
-
 import logging
 
 logger = logging.getLogger('pycobra.diagnostics')
@@ -424,6 +423,7 @@ class Diagnostics():
             return MSE      
         opt = min(MSE, key=MSE.get)
         return opt, MSE[opt]
+
 
     def optimal_beta(self, X, y, betas=None, info=False):
         """

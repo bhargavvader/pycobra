@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt
 import math
 import numpy as np
 import random
+import logging
 
+logger = logging.getLogger('pycobra.ewa')
 
 class Ewa(BaseEstimator):
     """
@@ -54,12 +56,13 @@ class Ewa(BaseEstimator):
         
         if self.beta is None and X_beta is not None:
             if betas is None:
-                betas = [0.1, 0.2, 0.5, 1]                
+                betas = [0.001, 0.01, 0.1,  1.0, 10.0, 100.0]                
             tuned_parameters = [{'beta': betas}]
             clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
             clf.fit(X_beta, y_beta)
             self.beta = clf.best_params_["beta"]     
     
+
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
         Parameters
@@ -235,6 +238,7 @@ class Ewa(BaseEstimator):
             result += self.machine_weight[machine] * self.machines[machine].predict(X)
 
         return result
+
 
     def plot_machine_weights(self, figsize=8):
         """

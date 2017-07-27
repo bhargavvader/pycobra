@@ -22,7 +22,7 @@ from collections import OrderedDict
 import logging
 
 
-logger = logging.getLogger('pycobra.visualisations')
+logger = logging.getLogger('pycobra.visualisation')
 
 def create_labels(indice_info):
     """
