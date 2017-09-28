@@ -24,19 +24,15 @@ class TestVisualisation(unittest.TestCase):
         # training data-set
         X_train = X[:D1 + D2]
         X_test = X[D1 + D2 + D3:D1 + D2 + D3 + D4]
-        X_eps = X[D1 + D2:D1 + D2 + D3]
         # for testing
         Y_train = Y[:D1 + D2]
         Y_test = Y[D1 + D2 + D3:D1 + D2 + D3 + D4]
-        Y_eps = Y[D1 + D2:D1 + D2 + D3]
 
-        COBRA = Cobra(random_state=0, epsilon=0.5)
-        COBRA.fit(X_train, Y_train)
+        cobra = Cobra(random_state=0, epsilon=0.5)
+        cobra.fit(X_train, Y_train)
         self.test_data = X_test
         self.test_response = Y_test
-        self.eps_data = X_eps
-        self.eps_response = Y_eps
-        self.cobra = COBRA
+        self.cobra = cobra
         self.cobra_vis = Visualisation(self.cobra, self.test_data[0:2], self.test_response[0:2])
 
     def test_indice_info(self):
