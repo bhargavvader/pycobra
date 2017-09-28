@@ -1,4 +1,5 @@
 [![Travis Status](https://travis-ci.org/bhargavvader/pycobra.svg?branch=master)](https://travis-ci.org/bhargavvader/pycobra)
+[![Coverage Status](https://coveralls.io/repos/github/bhargavvader/pycobra/badge.svg?branch=master)](https://coveralls.io/github/bhargavvader/pycobra?branch=master)
 
 ## pycobra
 
