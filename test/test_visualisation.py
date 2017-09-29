@@ -46,7 +46,7 @@ class TestVisualisation(unittest.TestCase):
         # vor = self.cobra_vis.voronoi(indice_info=indices)
         # self.cobra_vis.color_cobra(indice_info=indices)
 
-    def test_visualisations(self):
+    # def test_visualisations(self):
         # run all visualisation methods - does not run on travis
         # self.cobra_vis.boxplot()
         # self.cobra_vis.QQ()
