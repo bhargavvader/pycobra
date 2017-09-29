@@ -33,16 +33,23 @@ class TestVisualisation(unittest.TestCase):
         self.test_data = X_test
         self.test_response = Y_test
         self.cobra = cobra
-        self.cobra_vis = Visualisation(self.cobra, self.test_data[0:2], self.test_response[0:2])
+        self.cobra_vis = Visualisation(self.cobra, self.test_data[0:4], self.test_response[0:4])
 
     def test_indice_info(self):
 
-        indices, mse = self.cobra_vis.indice_info(self.test_data[0:2], self.test_response[0:2], epsilon=self.cobra.epsilon)
+        indices, mse = self.cobra_vis.indice_info(self.test_data[0:4], self.test_response[0:4], epsilon=self.cobra.epsilon)
         expected_indices, expected_mse = ('ridge','lasso'), 0.3516475171334160
         self.assertEqual(sorted(expected_indices), sorted(indices[0]))
         self.assertAlmostEqual(expected_mse, mse[0][0])
 
+        # we now run the visualisations using indices
+        vor = self.cobra_vis.voronoi(indice_info=indices)
+        self.cobra_vis.color_cobra(indice_info=indices)
 
+    def test_visualisations(self):
+        # run all visualisation methods
+        self.cobra_vis.boxplot()
+        self.cobra_vis.QQ()
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)

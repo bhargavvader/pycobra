@@ -41,8 +41,6 @@ class TestOptimal(unittest.TestCase):
         self.cobra_diagnostics = Diagnostics(self.cobra)
         self.cobra_diagnostics_ewa = Diagnostics(self.ewa)
 
-
-
     def test_alpha(self):
         alpha, mse = self.cobra_diagnostics.optimal_alpha(self.test_data, self.test_response)
         expected_alpha, expected_mse = 4, 0.068051089937708101
