@@ -9,5 +9,8 @@ install:
   - pip install numpy scipy
   - pip install scikit-learn
   - pip install matplotlib
+  - pip install coverage
 # command to run tests
-script: travis_wait 20 nosetests
+script: travis_wait 20 nosetests --with-coverage
+after_sucess: 
+  - coveralls
