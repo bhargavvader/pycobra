@@ -261,7 +261,7 @@ class Visualisation():
             self.random_state = self.aggregate.random_state
 
 
-    def plot_machines(self, machines=None):
+    def plot_machines(self, machines=None, colors=None):
         """
         Plot the results of the machines versus the actual answers (testing space).
         
@@ -269,6 +269,8 @@ class Visualisation():
         ----------
         machines: list, optional
             List of machines to plot.
+        colors: list, optional
+            Colors of machines.
         """
 
         if machines is None:
@@ -277,7 +279,8 @@ class Visualisation():
         plt.figure(figsize=(self.plot_size, self.plot_size))
         linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
 
-        colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
+        if colors is None:
+            colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
         plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
 
