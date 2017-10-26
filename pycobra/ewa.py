@@ -195,7 +195,7 @@ class Ewa(BaseEstimator):
         return self
 
 
-    def load_machine_weights(self, beta):
+    def load_machine_weights(self, beta=None):
         """
         Loads the EWA weights for each machine based on the training data.
         Should be run after all the machines to be used for aggregation is loaded.
@@ -210,17 +210,24 @@ class Ewa(BaseEstimator):
         self : returns an instance of self.
         """
 
-        if self.beta is None:
+        if self.beta is None and beta is None:
             beta = 1.0
+        if self.beta is not None and beta is None:
+            beta = self.beta
 
         self.machine_MSE = {}
         self.machine_weight = {}
         for machine in self.machines:
             self.machine_MSE[machine] = mean_squared_error(self.y_l, self.machines[machine].predict(self.X_l))
             self.machine_weight[machine] = np.exp(beta * self.machine_MSE[machine])
-
+            if self.machine_weight[machine] == np.inf:
+                logger.info("MSE too high, setting equal weights to all machines")
+                for machine in self.machines:
+                    self.machine_weight[machine] = 1 / len(self.machines)
+                return self
+                
         normalise = sum(self.machine_weight.values(), 0.0)
-        self.machine_weight = {k: v / normalise for k, v in self.machine_weight.items() }
+        self.machine_weight = {k: v / normalise for k, v in self.machine_weight.items()}
 
         return self
 
