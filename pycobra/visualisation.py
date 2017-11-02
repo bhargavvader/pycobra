@@ -284,7 +284,8 @@ class Visualisation():
         if plot_indices:
             linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
 
-        colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
+        if colors is None:
+            colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
         if plot_indices:
             plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
