@@ -261,7 +261,7 @@ class Visualisation():
             self.random_state = self.aggregate.random_state
 
 
-    def plot_machines(self, machines=None):
+    def plot_machines(self, machines=None, plot_indices=False):
         """
         Plot the results of the machines versus the actual answers (testing space).
         
@@ -269,22 +269,34 @@ class Visualisation():
         ----------
         machines: list, optional
             List of machines to plot.
+        plot_indices: boolean, optional.
+            Plots truth values against indices.
         """
 
         if machines is None:
             machines = self.machine_test_results.keys()
 
         plt.figure(figsize=(self.plot_size, self.plot_size))
-        linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
+        
+        if plot_indices:
+            linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
 
         colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
-        plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
+        if plot_indices:
+            plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
+        else:
+            plt.scatter(self.X_test, self.y_test, color=colors[0], label="Truth") 
 
         for machine, color in zip(machines, colors[1:]):
-            plt.scatter(linspace, self.machine_test_results[machine], color=color, label=machine)
+            if plot_indices:
+                plt.scatter(linspace, self.machine_test_results[machine], color=color, label=machine)
+            else:
+                plt.scatter(self.X_test, self.machine_test_results[machine], color=color, label=machine)
 
-        plt.xlabel("Point Indice")
+        if plot_indices:
+            plt.xlabel("Point Indice")
+
         plt.legend()
         plt.show()
 
