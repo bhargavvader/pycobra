@@ -340,8 +340,16 @@ class Visualisation():
             for i in range(0, reps):
                 cobra = Cobra(random_state=self.random_state, epsilon=self.aggregate.epsilon)
                 X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
-                cobra.fit(X, y)
+                cobra.fit(X, y, default=False)
+                cobra.split_data(shuffle_data=True)
+
+                for machine in self.aggregate.machines:
+                    self.aggregate.machines[machine].fit(cobra.X_k, cobra.y_k)
+                    cobra.load_machine(machine, self.aggregate.machines[machine])
+                
+                cobra.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                
                 for machine in cobra.machines:                
                    MSE[machine].append(mean_squared_error(y_test, cobra.machines[machine].predict(X_test)))
                 MSE["COBRA"].append(mean_squared_error(y_test, cobra.predict(X_test)))
@@ -358,7 +366,14 @@ class Visualisation():
             for i in range(0, reps):
                 ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
                 X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
-                ewa.fit(X, y)
+                ewa.fit(X, y, default=False)
+                ewa.split_data(shuffle_data=True)
+                
+                for machine in self.aggregate.machines:
+                    self.aggregate.machines[machine].fit(ewa.X_k, ewa.y_k)
+                    ewa.load_machine(machine, self.aggregate.machines[machine])
+
+                ewa.load_machine_weights(self.aggregate.beta)
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
                 for machine in ewa.machines:                
                    MSE[machine].append(mean_squared_error(y_test, ewa.machines[machine].predict(X_test)))
@@ -376,7 +391,14 @@ class Visualisation():
             for i in range(0, reps):
                 cc = ClassifierCobra(random_state=self.random_state)
                 X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
-                cc.fit(X, y)
+                cc.fit(X, y, default=False)
+                cc.split_data(shuffle_data=True)
+                
+                for machine in self.aggregate.machines:
+                    self.aggregate.machines[machine].fit(cc.X_k, cc.y_k)
+                    cc.load_machine(machine, self.aggregate.machines[machine])
+
+                cc.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
                 for machine in cc.machines:                
                    errors[machine].append(1 - accuracy_score(y_test, cc.machines[machine].predict(X_test)))
