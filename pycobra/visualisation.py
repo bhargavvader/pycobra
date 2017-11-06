@@ -281,19 +281,19 @@ class Visualisation():
 
         plt.figure(figsize=(self.plot_size, self.plot_size))
         
-        if plot_indices:
+        if plot_indices or self.X_test.size != self.y_test.size:
             linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
 
         if colors is None:
             colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
-        if plot_indices:
+        if plot_indices or self.X_test.size != self.y_test.size:
             plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
         else:
             plt.scatter(self.X_test, self.y_test, color=colors[0], label="Truth") 
 
         for machine, color in zip(machines, colors[1:]):
-            if plot_indices:
+            if plot_indices or self.X_test.size != self.y_test.size:
                 plt.scatter(linspace, self.machine_test_results[machine], color=color, label=machine)
             else:
                 plt.scatter(self.X_test, self.machine_test_results[machine], color=color, label=machine)
