@@ -1,5 +1,4 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
-
 from sklearn.metrics import mean_squared_error, accuracy_score
 
 import itertools
@@ -13,11 +12,12 @@ import logging
 
 logger = logging.getLogger('pycobra.diagnostics')
 
+
 class Diagnostics():
     """
-    Optimization of hyperparameters, and error details. 
+    Optimization of hyperparameters, and error details.
     """
-    def __init__ (self, aggregate, X_test=None, y_test=None, load_MSE=True, random_state=None):
+    def __init__(self, aggregate, X_test=None, y_test=None, load_MSE=True, random_state=None):
         """
         Parameters
         ----------
@@ -29,11 +29,11 @@ class Diagnostics():
 
         y_test : array-like, shape = [n_samples], optional.
             Test data target values.
-        
+
         load_MSE: bool, optional
             loads MSE and error bound values into diagnostics object.
 
-        random_state: integer or a numpy.random.RandomState object. 
+        random_state: integer or a numpy.random.RandomState object.
             Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
             reproducibility of your experiments, for example.
         """
@@ -56,7 +56,7 @@ class Diagnostics():
     def load_MSE(self):
         """
         Computes MSE and error bound for each Machine based on test data.
-        
+
         Returns
         -------
         self : returns an instance of self.
@@ -73,21 +73,21 @@ class Diagnostics():
             self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
             self.machine_MSE["EWA"] = mean_squared_error(self.y_test, self.machine_test_results["EWA"])
 
-        for machine in self.aggregate.machines:
-            self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
+        for machine in self.aggregate.machines_:
+            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
             # add MSE
             self.machine_MSE[machine] = mean_squared_error(self.y_test, self.machine_test_results[machine])
 
         # COBRA bound error
-        power = - 2 / (len(self.aggregate.machines) + 2)
-        self.error_bound = math.pow(len(self.aggregate.X_l), power) 
+        power = - 2 / (len(self.aggregate.machines_) + 2)
+        self.error_bound = math.pow(len(self.aggregate.X_l_), power)
 
         return self
 
     def load_errors(self):
         """
         Computes accuracy score for each Machine based on test data.
-        
+
         Returns
         -------
         self : returns an instance of self.
@@ -98,9 +98,9 @@ class Diagnostics():
 
         self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
         self.machine_error["ClassifierCobra"] = 1 - accuracy_score(self.y_test, self.machine_test_results["ClassifierCobra"])
-        
-        for machine in self.aggregate.machines:
-            self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
+
+        for machine in self.aggregate.machines_:
+            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
             # add MSE
             self.machine_error[machine] = 1 - accuracy_score(self.y_test, self.machine_test_results[machine])
 
@@ -113,10 +113,10 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want optimal alpha values
-        
+
         y: float
             Target value for query to compare.
-         
+
         single: boolean, optional
             Option to calculate optimal alpha for a single query point instead.
 
@@ -137,19 +137,19 @@ class Diagnostics():
             epsilon = self.aggregate.epsilon
 
         MSE = {}
-        for alpha in range(1, len(self.aggregate.machines) + 1):
+        for alpha in range(1, len(self.aggregate.machines_) + 1):
             machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-            machine.fit(self.aggregate.X, self.aggregate.y)
+            machine.fit(self.aggregate.X_, self.aggregate.y_)
             # for a single data point
             if single:
-                result = machine.predict(X, alpha=alpha) 
+                result = machine.predict(X, alpha=alpha)
                 MSE[alpha] = np.square(y - result)
             else:
                 results = machine.predict(X, alpha=alpha)
                 MSE[alpha] = (mean_squared_error(y, results))
 
         if info:
-            return MSE      
+            return MSE
         opt = min(MSE, key=MSE.get)
         return opt, MSE[opt]
 
@@ -163,10 +163,10 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want optimal machine combinations.
-        
+
         y: float
             Target value for query to compare.
-         
+
         single: boolean, optional
             Option to calculate optimal machine combinations for a single query point instead.
 
@@ -186,19 +186,19 @@ class Diagnostics():
         if epsilon is None:
             epsilon = self.aggregate.epsilon
 
-        n_machines = np.arange(1, len(self.aggregate.machines) + 1)
+        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
         MSE = {}
         for num in n_machines:
-            machine_names = self.aggregate.machines.keys()
+            machine_names = self.aggregate.machines_.keys()
             use = list(itertools.combinations(machine_names, num))
             for combination in use:
                 machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-                machine.fit(self.aggregate.X, self.aggregate.y, default=False)
+                machine.fit(self.aggregate.X_, self.aggregate.y_, default=False)
                 machine.split_data()
                 machine.load_default(machine_list=combination)
-                machine.load_machine_predictions() 
+                machine.load_machine_predictions()
                 if single:
-                    result = machine.predict(X.reshape(1, -1)) 
+                    result = machine.predict(X.reshape(1, -1))
                     MSE[combination] = np.square(y - result)
                 else:
                     results = machine.predict(X)
@@ -219,7 +219,7 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want for optimal epsilon.
-        
+
         y: float
             Target value for query to compare.
 
@@ -237,7 +237,7 @@ class Diagnostics():
 
         """
 
-        a, size = sorted(self.aggregate.all_predictions), len(self.aggregate.all_predictions)
+        a, size = sorted(self.aggregate.all_predictions_), len(self.aggregate.all_predictions_)
         res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
         emin = min(res)
         emax = max(a) - min(a)
@@ -246,7 +246,7 @@ class Diagnostics():
         MSE = {}
         for epsilon in erange:
             machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-            machine.fit(self.aggregate.X, self.aggregate.y)
+            machine.fit(self.aggregate.X_, self.aggregate.y_)
             results = machine.predict(X)
             MSE[epsilon] = (mean_squared_error(y, results))
 
@@ -257,7 +257,7 @@ class Diagnostics():
 
 
     def optimal_split(self, X, y, split=None, epsilon=None, info=False, graph=False):
-        
+
         """
         Find the optimal combination split (D_k, D_l) for fixed epsilon value for the COBRA predictor.
 
@@ -266,7 +266,7 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want for optimal split.
-        
+
         y: float
             Target value for query to compare.
 
@@ -298,12 +298,12 @@ class Diagnostics():
         MSE = {}
         for k, l in split:
             machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-            machine.fit(self.aggregate.X, self.aggregate.y, default=False)
-            machine.split_data(int(k * len(self.aggregate.X)), int((k + l) * len(self.aggregate.X)))
+            machine.fit(self.aggregate.X_, self.aggregate.y_, default=False)
+            machine.split_data(int(k * len(self.aggregate.X_)), int((k + l) * len(self.aggregate.X_)))
             machine.load_default()
-            machine.load_machine_predictions() 
+            machine.load_machine_predictions()
             results = machine.predict(X)
-            MSE[(k, l)] = (mean_squared_error(y, results))            
+            MSE[(k, l)] = (mean_squared_error(y, results))
 
         if graph:
             import matplotlib.pyplot as plt
@@ -328,10 +328,10 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want optimal alpha and epsilon values
-        
+
         y: float
             Target value for query to compare.
-         
+
         line_points: integer, optional
             Number of epsilon values to traverse the grid.
 
@@ -347,22 +347,22 @@ class Diagnostics():
         """
 
         # code to find maximum and minimum distance between predictions to create grid
-        a, size = sorted(self.aggregate.all_predictions), len(self.aggregate.all_predictions)
+        a, size = sorted(self.aggregate.all_predictions_), len(self.aggregate.all_predictions_)
         res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
         emin = min(res)
         emax = max(a) - min(a)
         erange = np.linspace(emin, emax, line_points)
-        n_machines = np.arange(1, len(self.aggregate.machines) + 1)
+        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
         MSE = {}
 
         # looping over epsilon and alpha values
         for epsilon in erange:
             for num in n_machines:
                 machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-                machine.fit(self.aggregate.X, self.aggregate.y)
+                machine.fit(self.aggregate.X_, self.aggregate.y_)
                 result = machine.predict(X.reshape(1, -1), alpha=num)
                 MSE[(num, epsilon)] = np.square(y - result)
-    
+
         if info:
             return MSE
 
@@ -379,10 +379,10 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want optimal machines and epsilon values
-        
+
         y: float
             Target value for query to compare.
-         
+
         line_points: integer, optional
             Number of epsilon values to traverse the grid.
 
@@ -398,29 +398,29 @@ class Diagnostics():
         """
 
         # code to find maximum and minimum distance between predictions to create grid
-        a, size = sorted(self.aggregate.all_predictions), len(self.aggregate.all_predictions)
+        a, size = sorted(self.aggregate.all_predictions_), len(self.aggregate.all_predictions_)
         res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
         emin = min(res)
         emax = max(a) - min(a)
         erange = np.linspace(emin, emax, line_points)
-        n_machines = np.arange(1, len(self.aggregate.machines) + 1)
+        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
         MSE = {}
 
         for epsilon in erange:
             for num in n_machines:
-                machine_names = self.aggregate.machines.keys()
+                machine_names = self.aggregate.machines_.keys()
                 use = list(itertools.combinations(machine_names, num))
                 for combination in use:
                     machine = Cobra(random_state=self.random_state, epsilon=epsilon)
-                    machine.fit(self.aggregate.X, self.aggregate.y, default=False)
+                    machine.fit(self.aggregate.X_, self.aggregate.y_, default=False)
                     machine.split_data()
                     machine.load_default(machine_list=combination)
-                    machine.load_machine_predictions() 
+                    machine.load_machine_predictions()
                     result = machine.predict(X.reshape(1, -1))
                     MSE[(combination, epsilon)] = np.square(y - result)
 
         if info:
-            return MSE      
+            return MSE
         opt = min(MSE, key=MSE.get)
         return opt, MSE[opt]
 
@@ -434,13 +434,13 @@ class Diagnostics():
 
         X: array-like, [n_features]
             Vector for which we want for optimal beta.
-        
+
         y: float
             Target value for query to compare.
-        
+
         betas: list, optional
             List of beta values to iterate over for optimal beta.
-        
+
         info: bool, optional
             Returns MSE dictionary for each beta value.
 
@@ -454,11 +454,11 @@ class Diagnostics():
 
         if betas is None:
             betas = np.arange(0.1, 10)
-            
+
         MSE = {}
         for beta in betas:
             machine = Ewa(random_state=self.random_state, beta=beta)
-            machine.fit(self.aggregate.X, self.aggregate.y)
+            machine.fit(self.aggregate.X_, self.aggregate.y_)
             results = machine.predict(X)
             MSE[beta] = (mean_squared_error(y, results))
 

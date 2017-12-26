@@ -1,6 +1,6 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
-from sklearn import linear_model 
+from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import shuffle
@@ -10,7 +10,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
 
 import matplotlib.pyplot as plt
-
 import math
 import numpy as np
 import random
@@ -18,50 +17,34 @@ import logging
 
 logger = logging.getLogger('pycobra.ewa')
 
+
 class Ewa(BaseEstimator):
     """
     Exponential Weighted Average aggregation method.
+    Implementation based on work by:
+    M. Mojirsheibani (1999), Combining Classifiers via Discretization,
+    Journal of the American Statistical Association.
+
+    Parameters
+    ----------
+    random_state: integer or a numpy.random.RandomState object.
+        Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
+        reproducibility of your experiments, for example.
+
+    beta: float, optional
+        Parameter to be passed when creating machine weights for EWA.
+
+    Attributes
+    ----------
+    machines_ : dictionary
+        dictionary mapping name of machine to the object.
+
+    machine_predictions_: A dictionary which maps machine name to it's predictions over X_l
+            This value is used to determine which points from y_l are used to aggregate.
     """
-    def __init__(self, random_state=None, beta=None, X_beta=None, y_beta=None, betas=None):
-        """
-        Parameters
-        ----------
-        random_state: integer or a numpy.random.RandomState object. 
-            Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
-            reproducibility of your experiments, for example.
-        
-        beta: float, optional
-            Parameter to be passed when creating machine weights for EWA.
-        
-        betas: list, optional
-            List of betas to find optimal beta for weights
-        
-        X_beta : shape = [n_samples, n_features]
-            Used if no beta is passed to find the optimal beta for data passed.
-
-        y_beta : array-like, shape = [n_samples]
-            Used if no beta is passed to find the optimal beta for data passed.
-
-
-        Attributes
-        ----------
-        
-        machines: A dictionary which maps machine names to the machine objects.
-                The machine object must have a predict method for it to be used during aggregation.
-
-        """
-        self.machines = {}
+    def __init__(self, random_state=None, beta=None):
         self.random_state = random_state
         self.beta = beta
-        
-        if self.beta is None and X_beta is not None:
-            if betas is None:
-                betas = [0.001, 0.01, 0.1,  1.0, 10.0, 100.0]                
-            tuned_parameters = [{'beta': betas}]
-            clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
-            clf.fit(X_beta, y_beta)
-            self.beta = clf.best_params_["beta"]     
-    
 
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
@@ -69,36 +52,46 @@ class Ewa(BaseEstimator):
         ----------
         X: array-like, [n_features]
             Training data which will be used to create the EWA aggregate.
-        
+
         y: array-like, shape = [n_samples]
-            Target values used to train the machines used in the EWA aggregate. 
+            Target values used to train the machines used in the EWA aggregate.
 
         default: bool, optional
             If set as true then sets up EWA with default machines and splitting.
 
-        X_k : shape = [n_samples, n_features]
-            Training data which is used to train the machines loaded into Ewa. 
+        X_k : shape = [n_samples, n_features], optional
+            Training data which is used to train the machines loaded into Ewa.
             Can be loaded directly into EWA; if not, the split_data method is used as default.
 
-        y_k : array-like, shape = [n_samples]
+        y_k : array-like, shape = [n_samples], optional
             Target values used to train the machines loaded into EWA.
 
-        X_l : shape = [n_samples, n_features]
+        X_l : shape = [n_samples, n_features], optional
             Training data which is used during the aggregation of EWA.
             Can be loaded directly into EWA; if not, the split_data method is used as default.
 
-        y_l : array-like, shape = [n_samples] 
+        y_l : array-like, shape = [n_samples], optional
             Target values which are actually used in the aggregation of EWA.
+
+        Returns
+        -------
+        self : returns an instance of self.
+
+        Notes
+        -----
+
+        We store the data used to train the machines because this information is used to make the prediction.
 
         """
 
         X, y = check_X_y(X, y)
-        self.X = X
-        self.y = y
-        self.X_k = X_k
-        self.X_l = X_l
-        self.y_k = y_k
-        self.y_l = y_l
+        self.X_ = X
+        self.y_ = y
+        self.X_k_ = X_k
+        self.X_l_ = X_l
+        self.y_k_ = y_k
+        self.y_l_ = y_l
+        self.machines_ = {}
 
         # set-up Ewa with default machines
         if default:
@@ -109,6 +102,30 @@ class Ewa(BaseEstimator):
         return self
 
 
+    def set_beta(self, X_beta=None, y_beta=None, betas=None):
+        """
+        Parameters
+        ----------
+
+        betas: list, optional
+            List of betas to find optimal beta for weights
+
+        X_beta : shape = [n_samples, n_features]
+            Used if no beta is passed to find the optimal beta for data passed.
+
+        y_beta : array-like, shape = [n_samples]
+            Used if no beta is passed to find the optimal beta for data passed.
+        """
+
+        if self.beta is None and X_beta is not None:
+            if betas is None:
+                betas = [0.001, 0.01, 0.1,  1.0, 10.0, 100.0]
+            tuned_parameters = [{'beta': betas}]
+            clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
+            clf.fit(X_beta, y_beta)
+            self.beta = clf.best_params_["beta"]
+
+
     def split_data(self, k=None, l=None, shuffle_data=False):
         """
         Split the data into different parts for training machines and for aggregation.
@@ -116,11 +133,11 @@ class Ewa(BaseEstimator):
         Parameters
         ----------
         k : int, optional
-            k is the number of points used to train the machines. 
+            k is the number of points used to train the machines.
             Those are the first k points of the data provided.
 
         l: int, optional
-            l is the number of points used to form the EWA aggregate. 
+            l is the number of points used to form the EWA aggregate.
 
         shuffle: bool, optional
             Boolean value to decide to shuffle the data before splitting.
@@ -131,45 +148,45 @@ class Ewa(BaseEstimator):
         """
 
         if shuffle_data:
-            self.X, self.y = shuffle(self.X, self.y, random_state=self.random_state)
+            self.X_, self.y_ = shuffle(self.X_, self.y_, random_state=self.random_state)
 
         if k is None and l is None:
-            k = int(len(self.X) / 2)
-            l = int(len(self.X))
+            k = int(len(self.X_) / 2)
+            l = int(len(self.X_))
 
         if k is not None and l is None:
-            l = len(self.X) - k
+            l = len(self.X_) - k
 
         if l is not None and k is None:
-            k = len(self.X) - l
+            k = len(self.X_) - l
 
-        self.X_k = self.X[:k]
-        self.X_l = self.X[k:l]
-        self.y_k = self.y[:k]
-        self.y_l = self.y[k:l]
+        self.X_k_ = self.X_[:k]
+        self.X_l_ = self.X_[k:l]
+        self.y_k_ = self.y_[:k]
+        self.y_l_ = self.y_[k:l]
 
         return self
 
 
     def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
         """
-        Loads 4 different scikit-learn regressors by default. 
+        Loads 4 different scikit-learn regressors by default.
 
         Parameters
         ----------
         machine_list: optional, list of strings
-            List of default machine names to be loaded. 
+            List of default machine names to be loaded.
 
         """
         for machine in machine_list:
             if machine == 'lasso':
-                self.machines['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k, self.y_k)
-            if machine == 'tree':  
-                self.machines['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k, self.y_k)
+                self.machines_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+            if machine == 'tree':
+                self.machines_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'ridge':
-                self.machines['ridge'] = linear_model.RidgeCV().fit(self.X_k, self.y_k)
+                self.machines_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
             if machine == 'random_forest':
-                self.machines['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k, self.y_k)
+                self.machines_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
 
 
     def load_machine(self, machine_name, machine):
@@ -190,8 +207,8 @@ class Ewa(BaseEstimator):
         -------
         self : returns an instance of self.
         """
-        
-        self.machines[machine_name] = machine
+
+        self.machines_[machine_name] = machine
         return self
 
 
@@ -199,7 +216,7 @@ class Ewa(BaseEstimator):
         """
         Loads the EWA weights for each machine based on the training data.
         Should be run after all the machines to be used for aggregation is loaded.
-        
+
         Parameters
         ----------
         beta : float
@@ -215,19 +232,19 @@ class Ewa(BaseEstimator):
         if self.beta is not None and beta is None:
             beta = self.beta
 
-        self.machine_MSE = {}
-        self.machine_weight = {}
-        for machine in self.machines:
-            self.machine_MSE[machine] = mean_squared_error(self.y_l, self.machines[machine].predict(self.X_l))
-            self.machine_weight[machine] = np.exp(beta * self.machine_MSE[machine])
-            if self.machine_weight[machine] == np.inf:
+        self.machine_MSE_ = {}
+        self.machine_weight_ = {}
+        for machine in self.machines_:
+            self.machine_MSE_[machine] = mean_squared_error(self.y_l_, self.machines_[machine].predict(self.X_l_))
+            self.machine_weight_[machine] = np.exp(beta * self.machine_MSE_[machine])
+            if self.machine_weight_[machine] == np.inf:
                 logger.info("MSE too high, setting equal weights to all machines")
-                for machine in self.machines:
-                    self.machine_weight[machine] = 1 / len(self.machines)
+                for machine in self.machines_:
+                    self.machine_weight_[machine] = 1 / len(self.machines_)
                 return self
-                
-        normalise = sum(self.machine_weight.values(), 0.0)
-        self.machine_weight = {k: v / normalise for k, v in self.machine_weight.items()}
+
+        normalise = sum(self.machine_weight_.values(), 0.0)
+        self.machine_weight_ = {k: v / normalise for k, v in self.machine_weight_.items()}
 
         return self
 
@@ -237,12 +254,16 @@ class Ewa(BaseEstimator):
         Parameters
         ----------
         X: array-like, [n_features]
+
+        Returns
+        -------
+        result: returns prediction
         """
         X = check_array(X)
 
         result = 0.0
-        for machine in self.machines:
-            result += self.machine_weight[machine] * self.machines[machine].predict(X)
+        for machine in self.machines_:
+            result += self.machine_weight_[machine] * self.machines_[machine].predict(X)
 
         return result
 
@@ -250,9 +271,14 @@ class Ewa(BaseEstimator):
     def plot_machine_weights(self, figsize=8):
         """
         Plot each machine weights
+
+        Parameteres
+        -----------
+        figsize: float, optional
+            Size of plot.
         """
 
-        plt.bar(range(len(self.machine_weight)), self.machine_weight.values(), align='center')
-        plt.xticks(range(len(self.machine_weight)), self.machine_weight.keys())
+        plt.bar(range(len(self.machine_weight_)), self.machine_weight_.values(), align='center')
+        plt.xticks(range(len(self.machine_weight_)), self.machine_weight_.keys())
 
         plt.show()
