@@ -1,5 +1,4 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
-
 import math
 import itertools
 
@@ -21,8 +20,8 @@ from collections import OrderedDict
 
 import logging
 
-
 logger = logging.getLogger('pycobra.visualisation')
+
 
 def create_labels(indice_info):
     """
@@ -44,19 +43,19 @@ def create_labels(indice_info):
     label = ""
     for machine in indice_info:
         label = machine + " + " + label
-    return label[:-3] 
+    return label[:-3]
 
 
 def gen_machine_colors(only_colors=False, num_colors=None, indice_info=None, rgb=False, plot_machines=None, colors=None):
     """
     Helper method to create a machine combinations to color dictionary, or a list of colors.
-    
+
     Parameters
     ----------
 
     indice_info: dictionary, optional
         Dictionary which is a result of running pycobra.visualisation.indice_info. Maps indices to combinations of machines.
-    
+
     only_colors: bool, optional
         Option to return only a list of colors
 
@@ -80,7 +79,7 @@ def gen_machine_colors(only_colors=False, num_colors=None, indice_info=None, rgb
     """
 
     # note: for default colors to be assigned, the latest version of matplotlib is needed.
-    # the code below is taken from the colors example: 
+    # the code below is taken from the colors example:
     from matplotlib import colors as mcolors
     colors = dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
     # Sort colors by hue, saturation, value and name.
@@ -191,8 +190,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
                 continue
 
             # Compute the missing endpoint of an infinite ridge
-
-            t = vor.points[p2] - vor.points[p1] # tangent
+            t = vor.points[p2] - vor.points[p1]  # tangent
             t /= np.linalg.norm(t)
             n = np.array([-t[1], t[0]])  # normal
 
@@ -232,7 +230,7 @@ class Visualisation():
 
         y_test : array-like, shape = [n_samples].
             Test data target values.
-        
+
         plot_size: int, optional
             Size of matplotlib plots.
 
@@ -249,13 +247,13 @@ class Visualisation():
 
         if type(aggregate) is Ewa:
             self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
-        
-        if type(aggregate) is ClassifierCobra:        
+
+        if type(aggregate) is ClassifierCobra:
             self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
 
-        for machine in self.aggregate.machines:
-            self.machine_test_results[machine] = self.aggregate.machines[machine].predict(self.X_test)
-        
+        for machine in self.aggregate.machines_:
+            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
+
         self.random_state = random_state
         if self.random_state is None:
             self.random_state = self.aggregate.random_state
@@ -264,7 +262,7 @@ class Visualisation():
     def plot_machines(self, machines=None, colors=None, plot_indices=False):
         """
         Plot the results of the machines versus the actual answers (testing space).
-        
+
         Parameters
         ----------
         machines: list, optional
@@ -280,17 +278,17 @@ class Visualisation():
             machines = self.machine_test_results.keys()
 
         plt.figure(figsize=(self.plot_size, self.plot_size))
-        
+
         if plot_indices or self.X_test.size != self.y_test.size:
-            linspace = np.linspace(0, len(self.y_test), len(self.y_test))     
+            linspace = np.linspace(0, len(self.y_test), len(self.y_test))
 
         if colors is None:
             colors = gen_machine_colors(only_colors=True, num_colors=len(machines) + 1)
 
         if plot_indices or self.X_test.size != self.y_test.size:
-            plt.scatter(linspace, self.y_test, color=colors[0], label="Truth") 
+            plt.scatter(linspace, self.y_test, color=colors[0], label="Truth")
         else:
-            plt.scatter(self.X_test, self.y_test, color=colors[0], label="Truth") 
+            plt.scatter(self.X_test, self.y_test, color=colors[0], label="Truth")
 
         for machine, color in zip(machines, colors[1:]):
             if plot_indices or self.X_test.size != self.y_test.size:
@@ -308,7 +306,7 @@ class Visualisation():
     def QQ(self, machine="COBRA"):
         """
         Plots the machine results vs the actual results in the form of a QQ-plot.
-        
+
         Parameters
         ----------
         machine: string, optional
@@ -319,7 +317,7 @@ class Visualisation():
         pred = self.machine_test_results[machine]
 
         # this is to make the plot look neater
-        min_limits = math.fabs(min(min(pred), min(self.y_test))) 
+        min_limits = math.fabs(min(min(pred), min(self.y_test)))
         max_limits = max(max(pred), max(self.y_test))
         axes.set_xlim([min(min(pred), min(self.y_test)) - min_limits, max(max(pred), max(self.y_test)) + max_limits])
         axes.set_ylim([min(min(pred), min(self.y_test)) - min_limits, max(max(pred), max(self.y_test)) + max_limits])
@@ -347,49 +345,49 @@ class Visualisation():
 
         """
         if type(self.aggregate) is Cobra:
-            
-            MSE = {k: [] for k, v in self.aggregate.machines.items()}
+
+            MSE = {k: [] for k, v in self.aggregate.machines_.items()}
             MSE["COBRA"] = []
             for i in range(0, reps):
                 cobra = Cobra(random_state=self.random_state, epsilon=self.aggregate.epsilon)
-                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
                 cobra.fit(X, y, default=False)
                 cobra.split_data(shuffle_data=True)
 
-                for machine in self.aggregate.machines:
-                    self.aggregate.machines[machine].fit(cobra.X_k, cobra.y_k)
-                    cobra.load_machine(machine, self.aggregate.machines[machine])
-                
+                for machine in self.aggregate.machines_:
+                    self.aggregate.machines_[machine].fit(cobra.X_k_, cobra.y_k_)
+                    cobra.load_machine(machine, self.aggregate.machines_[machine])
+
                 cobra.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                
-                for machine in cobra.machines:                
-                   MSE[machine].append(mean_squared_error(y_test, cobra.machines[machine].predict(X_test)))
+
+                for machine in cobra.machines_:
+                    MSE[machine].append(mean_squared_error(y_test, cobra.machines_[machine].predict(X_test)))
                 MSE["COBRA"].append(mean_squared_error(y_test, cobra.predict(X_test)))
 
             data, labels = [], []
             for machine in MSE:
                 data.append(MSE[machine])
                 labels.append(machine)
-        
+
         if type(self.aggregate) is Ewa:
-            
-            MSE = {k: [] for k, v in self.aggregate.machines.items()}
+
+            MSE = {k: [] for k, v in self.aggregate.machines_.items()}
             MSE["EWA"] = []
             for i in range(0, reps):
                 ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
-                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
                 ewa.fit(X, y, default=False)
                 ewa.split_data(shuffle_data=True)
-                
-                for machine in self.aggregate.machines:
-                    self.aggregate.machines[machine].fit(ewa.X_k, ewa.y_k)
-                    ewa.load_machine(machine, self.aggregate.machines[machine])
+
+                for machine in self.aggregate.machines_:
+                    self.aggregate.machines_[machine].fit(ewa.X_k_, ewa.y_k_)
+                    ewa.load_machine(machine, self.aggregate.machines_[machine])
 
                 ewa.load_machine_weights(self.aggregate.beta)
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in ewa.machines:                
-                   MSE[machine].append(mean_squared_error(y_test, ewa.machines[machine].predict(X_test)))
+                for machine in ewa.machines_:
+                    MSE[machine].append(mean_squared_error(y_test, ewa.machines_[machine].predict(X_test)))
                 MSE["EWA"].append(mean_squared_error(y_test, ewa.predict(X_test)))
 
             data, labels = [], []
@@ -398,23 +396,23 @@ class Visualisation():
                 labels.append(machine)
 
         if type(self.aggregate) is ClassifierCobra:
-            
-            errors = {k: [] for k, v in self.aggregate.machines.items()}
+
+            errors = {k: [] for k, v in self.aggregate.machines_.items()}
             errors["ClassifierCobra"] = []
             for i in range(0, reps):
                 cc = ClassifierCobra(random_state=self.random_state)
-                X, y = shuffle(self.aggregate.X, self.aggregate.y, random_state=self.aggregate.random_state)
+                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
                 cc.fit(X, y, default=False)
                 cc.split_data(shuffle_data=True)
-                
-                for machine in self.aggregate.machines:
-                    self.aggregate.machines[machine].fit(cc.X_k, cc.y_k)
-                    cc.load_machine(machine, self.aggregate.machines[machine])
+
+                for machine in self.aggregate.machines_:
+                    self.aggregate.machines_[machine].fit(cc.X_k_, cc.y_k_)
+                    cc.load_machine(machine, self.aggregate.machines_[machine])
 
                 cc.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in cc.machines:                
-                   errors[machine].append(1 - accuracy_score(y_test, cc.machines[machine].predict(X_test)))
+                for machine in cc.machines_: 
+                    errors[machine].append(1 - accuracy_score(y_test, cc.machines_[machine].predict(X_test)))
                 errors["ClassifierCobra"].append(1 - accuracy_score(y_test, cc.predict(X_test)))
 
             data, labels = [], []
@@ -435,7 +433,7 @@ class Visualisation():
         ----------
         epsilon: float, optional
             Epsilon value to use for diagnostics
-        
+
         line_points: int, optional
             if epsilon is not passed, optimal epsilon is found per point.
 
@@ -449,7 +447,7 @@ class Visualisation():
         """
 
         if X_test is None:
-            X_test = self.X_test  
+            X_test = self.X_test
         if y_test is None:
             y_test = self.y_test
 
@@ -479,11 +477,11 @@ class Visualisation():
         ----------
         epsilon: float, optional
             Epsilon value to use for diagnostics. Used to find indice_info if it isn't passed.
-        
+
         line_points: int, optional
             if epsilon is not passed, optimal epsilon is found per point. Used to find indice_info if it isn't passed.
 
-        indice_info: dicitonary, optional 
+        indice_info: dicitonary, optional
             dictionary mapping indice to optimal machines.
 
         plot_machines: list, optional
@@ -499,14 +497,14 @@ class Visualisation():
 
         if indice_info is None:
             indice_info = self.indice_info(line_points, epsilon)
-  
+
         if X_test is None:
-            X_test = self.X_test  
+            X_test = self.X_test
         if y_test is None:
-            y_test = self.y_test      
+            y_test = self.y_test
         # we want to plot only two columns
-        data_1 = X_test[:,0]
-        data_2 = X_test[:,1]
+        data_1 = X_test[:, 0]
+        data_2 = X_test[:, 1]
 
         if single:
             if machine_colors is None:
@@ -515,7 +513,7 @@ class Visualisation():
             fig, ax = plt.subplots()
             plot = ax.scatter([], [])
             for indice in indice_info:
-                
+       
                 ax.set_title("All Machines")
                 ax.scatter(data_1[indice], data_2[indice], color=machine_colors[indice_info[indice]], label=create_labels(indice_info[indice]))
 
@@ -551,13 +549,13 @@ class Visualisation():
         ----------
         epsilon: float, optional
             Epsilon value to use for diagnostics. Used to find indice_info if it isn't passed.
-        
+     
         line_points: int, optional
             if epsilon is not passed, optimal epsilon is found per point. Used to find indice_info if it isn't passed.
 
-        indice_info: dicitonary, optional 
+        indice_info: dicitonary, optional
             dictionary mapping indice to optimal machines.
-        
+      
         MSE: dictionary, optional
             dictionary mapping indice to mean-squared error for optimal machines
 
@@ -566,29 +564,29 @@ class Visualisation():
 
         single: bool, optional
             plots a single plot with each machine combination.
- 
+
         gradient: bool, optional
             instead of aggregating optimal machines, plots a colored plot for each machine,
             shaded according to the mean-squared error of that "region"
 
         machine_colors: dictionary, optional
-            Depending on the kind of coloring, a dictionary mapping machines to colors. 
+            Depending on the kind of coloring, a dictionary mapping machines to colors.
         """
 
         if X_test is None:
-            X_test = self.X_test  
+            X_test = self.X_test
         if y_test is None:
             y_test = self.y_test
 
         if indice_info is None:
             indice_info, MSE = self.indice_info(line_points, epsilon)
-            
+
         # passing input space to set up voronoi regions.
-        points = np.hstack((np.reshape(X_test[:,0], (len(X_test[:,0]), 1)), np.reshape(X_test[:,1], (len(X_test[:,1]), 1))))
+        points = np.hstack((np.reshape(X_test[:, 0], (len(X_test[:, 0]), 1)), np.reshape(X_test[:, 1], (len(X_test[:, 1]), 1))))
         vor = Voronoi(points)
         # use helper Voronoi
         regions, vertices = voronoi_finite_polygons_2d(vor)
-        
+
         # # colorize
         if not single:
             for machine in plot_machines:
@@ -597,21 +595,21 @@ class Visualisation():
                 ax.set_title(machine)
                 indice = 0
                 for region in regions:
-                    ax.plot(X_test[:,0][indice], X_test[:,1][indice], 'ko')
+                    ax.plot(X_test[:, 0][indice], X_test[:, 1][indice], 'ko')
                     polygon = vertices[region]
                     if gradient is True and MSE is not None:
-                    # we find closest index from range to give gradient value
+                        # we find closest index from range to give gradient value
                         mse_range = np.linspace(min(MSE.values()), max(MSE.values()), 10)
-                        num = min(mse_range, key=lambda x:abs(x - MSE[indice]))
+                        num = min(mse_range, key=lambda x: abs(x - MSE[indice]))
                         index = np.where(mse_range == num)
                         alpha = index[0][0] / 10.0 + 0.2
                         if alpha > 1.0:
                             alpha = 1.0
-                    # we fill the polygon with the appropriate gradient
+                        # we fill the polygon with the appropriate gradient
                         if machine in indice_info[indice]:
                             ax.fill(*zip(*polygon), alpha=alpha, color='r')
                     else:
-                    # if it isn't gradient based we just color red or blue depending on whether that point uses the machine in question
+                        # if it isn't gradient based we just color red or blue depending on whether that point uses the machine in question
                         if machine in indice_info[indice]:
                             ax.fill(*zip(*polygon), alpha=0.4, color='r', label="")
                         else:
@@ -635,14 +633,14 @@ class Visualisation():
             indice = 0
             for region in regions:
 
-                ax.plot(X_test[:,0][indice], X_test[:,1][indice], 'ko')
+                ax.plot(X_test[:, 0][indice], X_test[:, 1][indice], 'ko')
                 polygon = vertices[region]
                 ax.fill(*zip(*polygon), alpha=0.2, color=machine_colors[indice_info[indice]], label=create_labels(indice_info[indice]))
                 indice += 1
 
             ax.axis('equal')
             plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
-            plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)   
+            plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
             handles, labels = plt.gca().get_legend_handles_labels()
             by_label = OrderedDict(zip(labels, handles))
             plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
