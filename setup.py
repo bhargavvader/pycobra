@@ -4,7 +4,7 @@
 
 from setuptools import setup
 
-version = "0.2.1"
+version = "0.2.2"
 setup(name='pycobra',
       version=version,
       description='Python implementation of COBRA algorithm with regression analysis',
