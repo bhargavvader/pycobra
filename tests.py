@@ -6,4 +6,4 @@ import sys
 
 matplotlib.use('agg')
 
-nose.main(argv=sys.argv)
+nose.main()

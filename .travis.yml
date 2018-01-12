@@ -13,7 +13,7 @@ install:
 # command to run tests
 
 script:
-  - cd $HOME/build/bhargavvavder/pycobra
+  # - cd $HOME/build/bhargavvavder/pycobra
   - python tests.py -with-coverage travis_wait 20
 # script: travis_wait 20 nosetests --with-coverage
 after_sucess: 
