@@ -14,7 +14,7 @@ install:
 
 script:
   # - cd $HOME/build/bhargavvavder/pycobra
-  - python tests.py travis_wait 20 --with-coverage --cover-package=pycobra
+  - python tests.py --with-coverage --cover-package=pycobra
 # script: travis_wait 20 nosetests --with-coverage
 after_sucess: 
   - coveralls
