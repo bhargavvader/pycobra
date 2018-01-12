@@ -34,22 +34,28 @@ class TestVisualisation(unittest.TestCase):
         self.test_response = Y_test
         self.cobra = cobra
         self.cobra_vis = Visualisation(self.cobra, self.test_data[0:4], self.test_response[0:4])
+        self.indices, self.mse = self.cobra_vis.indice_info(self.test_data[0:4], self.test_response[0:4], epsilon=self.cobra.epsilon)
 
     def test_indice_info(self):
 
-        indices, mse = self.cobra_vis.indice_info(self.test_data[0:4], self.test_response[0:4], epsilon=self.cobra.epsilon)
-        expected_indices, expected_mse = ('ridge','lasso'), 0.3516475171334160
-        self.assertEqual(sorted(expected_indices), sorted(indices[0]))
-        self.assertAlmostEqual(expected_mse, mse[0][0])
+        expected_indices, expected_mse = ('ridge', 'lasso'), 0.3516475171334160
+        self.assertEqual(sorted(expected_indices), sorted(self.indices[0]))
+        self.assertAlmostEqual(expected_mse, self.mse[0][0])
 
-        # we now run the visualisations using indices - does not run on travis
-        # vor = self.cobra_vis.voronoi(indice_info=indices)
-        # self.cobra_vis.color_cobra(indice_info=indices)
+    def test_voronoi(self):
 
-    # def test_visualisations(self):
-        # run all visualisation methods - does not run on travis
-        # self.cobra_vis.boxplot()
-        # self.cobra_vis.QQ()
+        vor = self.cobra_vis.voronoi(indice_info=self.indices)
+        min_bound, max_bound = -0.19956180892237763, 0.9046027692022134
+        self.assertAlmostEqual(min_bound, vor.min_bound[0])
+        self.assertAlmostEqual(max_bound, vor.max_bound[0])
+
+
+    def test_boxplot(self):
+
+        expected_data_len =  100
+        data = self.cobra_vis.boxplot(info=True)
+        self.assertEqual(len(data[0]), expected_data_len)
+
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)

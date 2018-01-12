@@ -27,7 +27,7 @@ setup(name='pycobra',
           'scikit-learn',
           'matplotlib'
       ],
-      test_suite='test',
+      test_suite='tests',
       keywords=[
           'Aggregation of Predictors',
           'Regression Analysis',

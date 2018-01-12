@@ -301,6 +301,7 @@ class Visualisation():
 
         plt.legend()
         plt.show()
+        return plt
 
 
     def QQ(self, machine="COBRA"):
@@ -332,9 +333,10 @@ class Visualisation():
 
         plt.legend()
         plt.show()
+        return plt
 
 
-    def boxplot(self, reps=100):
+    def boxplot(self, reps=100, info=False):
         """
         Plots boxplots of machines.
 
@@ -342,6 +344,9 @@ class Visualisation():
         ----------
         reps: int, optional
             Number of times to repeat experiments for boxplot.
+
+        info: boolean, optional
+            Returns data 
 
         """
         if type(self.aggregate) is Cobra:
@@ -424,6 +429,9 @@ class Visualisation():
         plt.figure(figsize=(self.plot_size, self.plot_size))
         plt.boxplot(data, labels=labels)
         plt.show()
+        
+        if info:
+            return data        
 
     def indice_info(self, X_test=None, y_test=None, epsilon=None, line_points=200):
         """
@@ -517,9 +525,10 @@ class Visualisation():
                 ax.set_title("All Machines")
                 ax.scatter(data_1[indice], data_2[indice], color=machine_colors[indice_info[indice]], label=create_labels(indice_info[indice]))
 
-            handles, labels = plt.gca().get_legend_handles_labels()
-            by_label = OrderedDict(zip(labels, handles))
-            plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            try:
+                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            except ValueError:
+                return ax
 
         if not single:
             if machine_colors is None:
@@ -540,6 +549,7 @@ class Visualisation():
                     if machine in indice_info[indice]:
                         ax.scatter(data_1[indice], data_2[indice], color=machine_colors[machine])
 
+        return ax
 
     def voronoi(self, X_test=None, y_test=None, line_points=200, epsilon=None, indice_info=None, MSE=None, plot_machines=["ridge", "lasso", "random_forest", "tree"], machine_colors=None, gradient=False, single=False):
         """
@@ -641,8 +651,8 @@ class Visualisation():
             ax.axis('equal')
             plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
             plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
-            handles, labels = plt.gca().get_legend_handles_labels()
-            by_label = OrderedDict(zip(labels, handles))
-            plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-
+            try:
+                plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            except ValueError:
+                return vor
             return vor
