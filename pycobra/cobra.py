@@ -164,8 +164,8 @@ class Cobra(BaseEstimator):
                     # if value is close to prediction, select the indice
                     if math.fabs(self.machine_predictions_[machine][count] - val) <= self.epsilon:
                         select[machine].add(count)
-                except ValueError:
-                    logger.log("Value Error")
+                except (ValueError, TypeError) as e:
+                    logger.log("Error in indice selection")
                     continue
 
         points = []
