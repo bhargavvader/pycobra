@@ -5,7 +5,8 @@
 
 ## pycobra
 
-pycobra is a python library for ensemble learning, which serves as a toolkit for regression, classification, and visualisation. It is scikit-learn compatible and fits into the existing scikit-learn ecosystem.
+pycobra is a python library for ensemble learning. It serves as a toolkit for regression and classification using these ensembled machines, and also for visualisation of the performance of the new machine and constituent machines. Here, when we say machine, we mean any predictor or machine learning object - it could be a LASSO regressor, or even a Neural Network.
+It is scikit-learn compatible and fits into the existing scikit-learn ecosystem.
 
 pycobra offers a python implementation of the COBRA algorithm introduced by Biau et al. (2016) for regression.
 
@@ -27,6 +28,8 @@ Run ``pip install pycobra`` to download and install from PyPI.
 Run ``python setup.py install`` for default installation.
 
 Run ``python setup.py test`` to run all tests. 
+
+Run ``pip install .`` to install from source. 
 
 ### Dependencies
 
