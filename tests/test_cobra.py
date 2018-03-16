@@ -8,6 +8,9 @@ from pycobra.ewa import Ewa
 
 import logging
 
+from sklearn.utils.estimator_checks import check_estimator
+
+
 class TestPrediction(unittest.TestCase):
     def setUp(self):
         # setting up our random data-set
@@ -46,6 +49,10 @@ class TestPrediction(unittest.TestCase):
         expected = 2.7716310515173239
         result = self.ewa.predict(self.test_data[0].reshape(1, -1))
         self.assertAlmostEqual(expected, result[0])        
+
+    def test_estimators(self):
+        check_estimator(Cobra)
+        check_estimator(Ewa)
 
 
 if __name__ == '__main__':

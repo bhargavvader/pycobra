@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from pycobra.cobra import Cobra
+from pycobra.ewa import Ewa
 from pycobra.diagnostics import Diagnostics
 from pycobra.visualisation import Visualisation
 
@@ -36,8 +37,12 @@ class TestVisualisation(unittest.TestCase):
         self.cobra_vis = Visualisation(self.cobra, self.test_data[0:4], self.test_response[0:4])
         self.indices, self.mse = self.cobra_vis.indice_info(self.test_data[0:4], self.test_response[0:4], epsilon=self.cobra.epsilon)
 
-    def test_indice_info(self):
+        ewa = Ewa(random_state=0)
+        ewa.fit(X_train, Y_train)
+        self.ewa = ewa
+        self.ewa_vis = Visualisation(self.ewa, self.test_data[0:4], self.test_response[0:4])
 
+    def test_indice_info(self):
         expected_indices, expected_mse = ('ridge', 'lasso'), 0.3516475171334160
         self.assertEqual(sorted(expected_indices), sorted(self.indices[0]))
         self.assertAlmostEqual(expected_mse, self.mse[0][0])
@@ -49,11 +54,18 @@ class TestVisualisation(unittest.TestCase):
         self.assertAlmostEqual(min_bound, vor.min_bound[0])
         self.assertAlmostEqual(max_bound, vor.max_bound[0])
 
+        vor_ = self.cobra_vis.voronoi(indice_info=self.indices, single=True)
+        min_bound, max_bound = -0.19956180892237763, 0.9046027692022134
+        self.assertAlmostEqual(min_bound, vor_.min_bound[0])
+        self.assertAlmostEqual(max_bound, vor_.max_bound[0])
 
     def test_boxplot(self):
 
         expected_data_len =  100
         data = self.cobra_vis.boxplot(info=True)
+        self.assertEqual(len(data[0]), expected_data_len)
+
+        data = self.ewa_vis.boxplot(info=True)
         self.assertEqual(len(data[0]), expected_data_len)
 
 
