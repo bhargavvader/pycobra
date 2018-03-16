@@ -47,7 +47,7 @@ class Cobra(BaseEstimator):
 
     """
 
-    def __init__(self, random_state=None, epsilon=None, machines=None):
+    def __init__(self, random_state=None, epsilon=None):
         self.random_state = random_state
         self.epsilon = epsilon
 
