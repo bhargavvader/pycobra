@@ -4,6 +4,10 @@
 
 from setuptools import setup
 
+DESCRIPTION = 'A set of python modules for ensemble learning and visualisation'
+with open('README.rst') as f:
+    LONG_DESCRIPTION = f.read()
+
 version = "0.2.2"
 setup(name='pycobra',
       version=version,
@@ -33,4 +37,5 @@ setup(name='pycobra',
           'Regression Analysis',
           'Voronoi Tesselation',
           'Statistical Aggregation'
-      ])
+      ],
+      long_description=LONG_DESCRIPTION)
