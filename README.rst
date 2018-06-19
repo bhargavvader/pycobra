@@ -32,9 +32,9 @@ Documentation and Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The
-`notebooks <https://github.com/bhargavvader/pycobra/tree/master/notebooks>`__
+`notebooks <https://github.com/bhargavvader/pycobra/tree/master/docs/notebooks>`__
 directory showcases the usage of pycobra, with examples and basic usage.
-The `documentation <https://bhargavvader.github.io>`__ page further
+The `documentation <https://modal.lille.inria.fr/pycobra/>`__ page further
 covers how to use pycobra.
 
 Installation
