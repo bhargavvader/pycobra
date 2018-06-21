@@ -62,7 +62,7 @@ References
 ~~~~~~~~~~
 
 -  B. Guedj and B. Srinivasa Desikan (2018). Pycobra: A Python Toolbox for Ensemble Learning and Visualisation. 
-Journal of Machine Learning Research, vol. 18 (190), 1--5.
+   Journal of Machine Learning Research, vol. 18 (190), 1--5.
 -  G. Biau, A. Fischer, B. Guedj and J. D. Malley (2016), COBRA: A
    combined regression strategy, Journal of Multivariate Analysis.
 -  M. Mojirsheibani (1999), Combining Classifiers via Discretization,
