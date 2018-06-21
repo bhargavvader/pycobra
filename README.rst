@@ -28,6 +28,10 @@ regression machines with COBRA. The Visualisation class also lets you
 use some of the tools (such as Voronoi Tesselations) on other
 visualisation problems, such as clustering.
 
+pycobra is described in the `paper <http://jmlr.org/papers/v18/17-228.html>`__ "Pycobra: A Python Toolbox for Ensemble Learning and Visualisation",
+Journal of Machine Learning Research, vol. 18 (190), 1--5.
+
+
 Documentation and Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -57,6 +61,8 @@ Dependencies
 References
 ~~~~~~~~~~
 
+-  B. Guedj and B. Srinivasa Desikan (2018). Pycobra: A Python Toolbox for Ensemble Learning and Visualisation. 
+Journal of Machine Learning Research, vol. 18 (190), 1--5.
 -  G. Biau, A. Fischer, B. Guedj and J. D. Malley (2016), COBRA: A
    combined regression strategy, Journal of Multivariate Analysis.
 -  M. Mojirsheibani (1999), Combining Classifiers via Discretization,
