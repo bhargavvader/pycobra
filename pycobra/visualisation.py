@@ -218,7 +218,7 @@ class Visualisation():
     Plots and visualisations of COBRA aggregates.
     If X_test and y_test is loaded, you can run the plotting functions with no parameters.
     """
-    def __init__(self, aggregate, X_test, y_test, plot_size=8, random_state=None):
+    def __init__(self, aggregate, X_test, y_test, plot_size=8, estimators={}, random_state=None, **kwargs):
         """
         Parameters
         ----------
@@ -234,25 +234,42 @@ class Visualisation():
         plot_size: int, optional
             Size of matplotlib plots.
 
+        estimators: list, optional
+            List of machine objects to visualise. Default is machines used in aggregate.
+
         """
         self.aggregate = aggregate
         self.X_test = X_test
         self.y_test = y_test
         self.plot_size = plot_size
-
+        self.estimators = estimators
         # load results so plotting doesn't need parameters
         self.machine_test_results = {}
-        if type(aggregate) is Cobra:
-            self.machine_test_results["COBRA"] = self.aggregate.predict(self.X_test)
+        self.machine_MSE = {}
+        
+        if len(self.estimators) == 0:
+            self.estimators = self.aggregate.estimators_
 
-        if type(aggregate) is Ewa:
-            self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
-
+        # if we are visualising ClassifierCobra then we must use accuracy score instead of MSE
         if type(aggregate) is ClassifierCobra:
             self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
+            self.machine_error["ClassifierCobra"] = 1 - accuracy_score(self.y_test, self.machine_test_results["ClassifierCobra"])
+            for machine in self.estimators_:
+                self.machine_test_results[machine] = self.estimators_[machine].predict(self.X_test)
+                # add MSE
+                self.machine_error[machine] = 1 - accuracy_score(self.y_test, self.machine_test_results[machine])
 
-        for machine in self.aggregate.machines_:
-            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
+
+        names_dict = {Cobra: "Cobra", Ewa: "EWA"}
+        for name in names_dict:
+            if type(aggregate) is name:
+                self.machine_test_results[names_dict[name]] = self.aggregate.predict(self.X_test)
+                self.machine_MSE[names_dict[name]] = mean_squared_error(self.y_test, self.machine_test_results[names_dict[name]])            
+
+        for machine in self.estimators:
+            self.machine_test_results[machine] = self.estimators[machine].predict(self.X_test)
+            self.machine_MSE[machine] = mean_squared_error(self.y_test, self.machine_test_results[machine])
+
 
         self.random_state = random_state
         if self.random_state is None:
@@ -275,7 +292,7 @@ class Visualisation():
         """
 
         if machines is None:
-            machines = self.machine_test_results.keys()
+            machines = self.estimators
 
         plt.figure(figsize=(self.plot_size, self.plot_size))
 
@@ -304,7 +321,7 @@ class Visualisation():
         return plt
 
 
-    def QQ(self, machine="COBRA"):
+    def QQ(self, machine="Cobra"):
         """
         Plots the machine results vs the actual results in the form of a QQ-plot.
 
@@ -351,24 +368,32 @@ class Visualisation():
         """
         if type(self.aggregate) is Cobra:
 
-            MSE = {k: [] for k, v in self.aggregate.machines_.items()}
-            MSE["COBRA"] = []
+            MSE = {k: [] for k, v in self.estimators.items()}
+            MSE["Cobra"] = []
             for i in range(0, reps):
                 cobra = Cobra(random_state=self.random_state, epsilon=self.aggregate.epsilon)
                 X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
                 cobra.fit(X, y, default=False)
                 cobra.split_data(shuffle_data=True)
 
-                for machine in self.aggregate.machines_:
-                    self.aggregate.machines_[machine].fit(cobra.X_k_, cobra.y_k_)
-                    cobra.load_machine(machine, self.aggregate.machines_[machine])
+                for machine in self.aggregate.estimators_:
+                    self.aggregate.estimators_[machine].fit(cobra.X_k_, cobra.y_k_)
+                    cobra.load_machine(machine, self.aggregate.estimators_[machine])
 
                 cobra.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
 
-                for machine in cobra.machines_:
-                    MSE[machine].append(mean_squared_error(y_test, cobra.machines_[machine].predict(X_test)))
-                MSE["COBRA"].append(mean_squared_error(y_test, cobra.predict(X_test)))
+
+                for machine in self.estimators:
+                    if "Cobra" in machine:
+                        self.estimators[machine].fit(X, y)
+                    else:
+                        self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
+                    preds = self.estimators[machine].predict(X_test)
+   
+                    MSE[machine].append(mean_squared_error(y_test, preds))
+
+                MSE["Cobra"].append(mean_squared_error(y_test, cobra.predict(X_test)))
 
             data, labels = [], []
             for machine in MSE:
@@ -377,7 +402,7 @@ class Visualisation():
 
         if type(self.aggregate) is Ewa:
 
-            MSE = {k: [] for k, v in self.aggregate.machines_.items()}
+            MSE = {k: [] for k, v in self.aggregate.estimators_.items()}
             MSE["EWA"] = []
             for i in range(0, reps):
                 ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
@@ -385,14 +410,22 @@ class Visualisation():
                 ewa.fit(X, y, default=False)
                 ewa.split_data(shuffle_data=True)
 
-                for machine in self.aggregate.machines_:
-                    self.aggregate.machines_[machine].fit(ewa.X_k_, ewa.y_k_)
-                    ewa.load_machine(machine, self.aggregate.machines_[machine])
+                for machine in self.estimators:
+                    self.aggregate.estimators_[machine].fit(ewa.X_k_, ewa.y_k_)
+                    ewa.load_machine(machine, self.aggregate.estimators_[machine])
 
                 ewa.load_machine_weights(self.aggregate.beta)
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in ewa.machines_:
-                    MSE[machine].append(mean_squared_error(y_test, ewa.machines_[machine].predict(X_test)))
+                for machine in self.estimators:
+                    if "Cobra" in machine:
+                        self.estimators[machine].fit(X, y)
+                    else:
+                        self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
+
+                    preds = self.estimators[machine].predict(X_test)
+
+                    MSE[machine].append(mean_squared_error(y_test, preds))
+                
                 MSE["EWA"].append(mean_squared_error(y_test, ewa.predict(X_test)))
 
             data, labels = [], []
@@ -402,7 +435,7 @@ class Visualisation():
 
         if type(self.aggregate) is ClassifierCobra:
 
-            errors = {k: [] for k, v in self.aggregate.machines_.items()}
+            errors = {k: [] for k, v in self.aggregate.estimators_.items()}
             errors["ClassifierCobra"] = []
             for i in range(0, reps):
                 cc = ClassifierCobra(random_state=self.random_state)
@@ -410,14 +443,14 @@ class Visualisation():
                 cc.fit(X, y, default=False)
                 cc.split_data(shuffle_data=True)
 
-                for machine in self.aggregate.machines_:
-                    self.aggregate.machines_[machine].fit(cc.X_k_, cc.y_k_)
-                    cc.load_machine(machine, self.aggregate.machines_[machine])
+                for machine in self.aggregate.estimators_:
+                    self.aggregate.estimators_[machine].fit(cc.X_k_, cc.y_k_)
+                    cc.load_machine(machine, self.aggregate.estimators_[machine])
 
                 cc.load_machine_predictions()
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in cc.machines_: 
-                    errors[machine].append(1 - accuracy_score(y_test, cc.machines_[machine].predict(X_test)))
+                for machine in self.estimators: 
+                    errors[machine].append(1 - accuracy_score(y_test, self.estimators[machine].predict(X_test)))
                 errors["ClassifierCobra"].append(1 - accuracy_score(y_test, cc.predict(X_test)))
 
             data, labels = [], []
