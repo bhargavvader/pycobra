@@ -17,7 +17,7 @@ class Diagnostics():
     """
     Optimization of hyperparameters, and error details.
     """
-    def __init__(self, aggregate, X_test=None, y_test=None, load_MSE=True, random_state=None):
+    def __init__(self, aggregate, X_test=None, y_test=None, load_MSE=False, random_state=None):
         """
         Parameters
         ----------
@@ -65,21 +65,22 @@ class Diagnostics():
         self.machine_test_results = {}
         self.machine_MSE = {}
 
-        if type(self.aggregate) is Cobra:
-            self.machine_test_results["COBRA"] = self.aggregate.predict(self.X_test)
-            self.machine_MSE["COBRA"] = mean_squared_error(self.y_test, self.machine_test_results["COBRA"])
+       
+        names_dict = {Cobra: "Cobra", Ewa: "EWA"}
 
-        if type(self.aggregate) is Ewa:
-            self.machine_test_results["EWA"] = self.aggregate.predict(self.X_test)
-            self.machine_MSE["EWA"] = mean_squared_error(self.y_test, self.machine_test_results["EWA"])
+        for name in names_dict:
+            if type(self.aggregate) is name:
+                self.machine_test_results[names_dict[name]] = self.aggregate.predict(self.X_test)
+                self.machine_MSE[names_dict[name]] = mean_squared_error(self.y_test, self.machine_test_results[names_dict[name]])            
 
-        for machine in self.aggregate.machines_:
-            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
+
+        for machine in self.aggregate.estimators_:
+            self.machine_test_results[machine] = self.aggregate.estimators_[machine].predict(self.X_test)
             # add MSE
             self.machine_MSE[machine] = mean_squared_error(self.y_test, self.machine_test_results[machine])
 
         # COBRA bound error
-        power = - 2 / (len(self.aggregate.machines_) + 2)
+        power = - 2 / (len(self.aggregate.estimators_) + 2)
         self.error_bound = math.pow(len(self.aggregate.X_l_), power)
 
         return self
@@ -99,8 +100,8 @@ class Diagnostics():
         self.machine_test_results["ClassifierCobra"] = self.aggregate.predict(self.X_test)
         self.machine_error["ClassifierCobra"] = 1 - accuracy_score(self.y_test, self.machine_test_results["ClassifierCobra"])
 
-        for machine in self.aggregate.machines_:
-            self.machine_test_results[machine] = self.aggregate.machines_[machine].predict(self.X_test)
+        for machine in self.aggregate.estimators_:
+            self.machine_test_results[machine] = self.aggregate.estimators_[machine].predict(self.X_test)
             # add MSE
             self.machine_error[machine] = 1 - accuracy_score(self.y_test, self.machine_test_results[machine])
 
@@ -137,7 +138,7 @@ class Diagnostics():
             epsilon = self.aggregate.epsilon
 
         MSE = {}
-        for alpha in range(1, len(self.aggregate.machines_) + 1):
+        for alpha in range(1, len(self.aggregate.estimators_) + 1):
             machine = Cobra(random_state=self.random_state, epsilon=epsilon)
             machine.fit(self.aggregate.X_, self.aggregate.y_)
             # for a single data point
@@ -186,10 +187,10 @@ class Diagnostics():
         if epsilon is None:
             epsilon = self.aggregate.epsilon
 
-        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
+        n_machines = np.arange(1, len(self.aggregate.estimators_) + 1)
         MSE = {}
         for num in n_machines:
-            machine_names = self.aggregate.machines_.keys()
+            machine_names = self.aggregate.estimators_.keys()
             use = list(itertools.combinations(machine_names, num))
             for combination in use:
                 machine = Cobra(random_state=self.random_state, epsilon=epsilon)
@@ -352,7 +353,7 @@ class Diagnostics():
         emin = min(res)
         emax = max(a) - min(a)
         erange = np.linspace(emin, emax, line_points)
-        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
+        n_machines = np.arange(1, len(self.aggregate.estimators_) + 1)
         MSE = {}
 
         # looping over epsilon and alpha values
@@ -403,12 +404,12 @@ class Diagnostics():
         emin = min(res)
         emax = max(a) - min(a)
         erange = np.linspace(emin, emax, line_points)
-        n_machines = np.arange(1, len(self.aggregate.machines_) + 1)
+        n_machines = np.arange(1, len(self.aggregate.estimators_) + 1)
         MSE = {}
 
         for epsilon in erange:
             for num in n_machines:
-                machine_names = self.aggregate.machines_.keys()
+                machine_names = self.aggregate.estimators_.keys()
                 use = list(itertools.combinations(machine_names, num))
                 for combination in use:
                     machine = Cobra(random_state=self.random_state, epsilon=epsilon)
@@ -466,3 +467,4 @@ class Diagnostics():
             return MSE
         opt = min(MSE, key=MSE.get)
         return opt, MSE[opt]
+
