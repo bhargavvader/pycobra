@@ -3,6 +3,8 @@
 from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVR
+
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
@@ -91,7 +93,7 @@ class Ewa(BaseEstimator):
         self.X_l_ = X_l
         self.y_k_ = y_k
         self.y_l_ = y_l
-        self.machines_ = {}
+        self.estimators_ = {}
 
         # set-up Ewa with default machines
         if default:
@@ -168,7 +170,7 @@ class Ewa(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
+    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm']):
         """
         Loads 4 different scikit-learn regressors by default.
 
@@ -180,13 +182,15 @@ class Ewa(BaseEstimator):
         """
         for machine in machine_list:
             if machine == 'lasso':
-                self.machines_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'tree':
-                self.machines_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'ridge':
-                self.machines_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
+                self.estimators_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
             if machine == 'random_forest':
-                self.machines_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+            if machine == 'svm':
+                self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
 
 
     def load_machine(self, machine_name, machine):
@@ -208,7 +212,7 @@ class Ewa(BaseEstimator):
         self : returns an instance of self.
         """
 
-        self.machines_[machine_name] = machine
+        self.estimators_[machine_name] = machine
         return self
 
 
@@ -234,13 +238,13 @@ class Ewa(BaseEstimator):
 
         self.machine_MSE_ = {}
         self.machine_weight_ = {}
-        for machine in self.machines_:
-            self.machine_MSE_[machine] = mean_squared_error(self.y_l_, self.machines_[machine].predict(self.X_l_))
+        for machine in self.estimators_:
+            self.machine_MSE_[machine] = mean_squared_error(self.y_l_, self.estimators_[machine].predict(self.X_l_))
             self.machine_weight_[machine] = np.exp(beta * self.machine_MSE_[machine])
             if self.machine_weight_[machine] == np.inf:
                 logger.info("MSE too high, setting equal weights to all machines")
-                for machine in self.machines_:
-                    self.machine_weight_[machine] = 1 / len(self.machines_)
+                for machine in self.estimators_:
+                    self.machine_weight_[machine] = 1 / len(self.estimators_)
                 return self
 
         normalise = sum(self.machine_weight_.values(), 0.0)
@@ -262,8 +266,8 @@ class Ewa(BaseEstimator):
         X = check_array(X)
 
         result = 0.0
-        for machine in self.machines_:
-            result += self.machine_weight_[machine] * self.machines_[machine].predict(X)
+        for machine in self.estimators_:
+            result += self.machine_weight_[machine] * self.estimators_[machine].predict(X)
 
         return result
 

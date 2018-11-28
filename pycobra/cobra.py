@@ -3,6 +3,8 @@
 from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVR
+
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
@@ -47,7 +49,7 @@ class Cobra(BaseEstimator):
 
     """
 
-    def __init__(self, random_state=None, epsilon=None, machines=None):
+    def __init__(self, random_state=None, epsilon=None):
         self.random_state = random_state
         self.epsilon = epsilon
 
@@ -86,7 +88,7 @@ class Cobra(BaseEstimator):
         self.X_l_ = X_l
         self.y_k_ = y_k
         self.y_l_ = y_l
-        self.machines_ = {}
+        self.estimators_ = {}
         # set-up COBRA with default machines
         if default:
             self.split_data()
@@ -96,7 +98,7 @@ class Cobra(BaseEstimator):
         return self
 
 
-    def set_epsilon(self, X_epsilon=None, y_epsilon=None, grid_points=None):
+    def set_epsilon(self, X_epsilon=None, y_epsilon=None, grid_points=50):
         """
         Parameters
         ----------
@@ -128,7 +130,7 @@ class Cobra(BaseEstimator):
             clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
             clf.fit(X_epsilon, y_epsilon)
             self.epsilon = clf.best_params_["epsilon"]
-            self.machines_, self.machine_predictions_ = {}, {}
+            self.estimators_, self.machine_predictions_ = {}, {}
 
 
     def pred(self, X, alpha, info=False):
@@ -153,9 +155,9 @@ class Cobra(BaseEstimator):
 
         # dictionary mapping machine to points selected
         select = {}
-        for machine in self.machines_:
+        for machine in self.estimators_:
             # machine prediction
-            val = self.machines_[machine].predict(X)
+            val = self.estimators_[machine].predict(X)
             select[machine] = set()
             # iterating from l to n
             # replace with numpy iteration
@@ -222,7 +224,7 @@ class Cobra(BaseEstimator):
         X = check_array(X)
 
         if alpha is None:
-            alpha = len(self.machines_)
+            alpha = len(self.estimators_)
         if X.ndim == 1:
             return self.pred(X.reshape(1, -1), info=info, alpha=alpha)
 
@@ -286,7 +288,7 @@ class Cobra(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
+    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm']):
         """
         Loads 4 different scikit-learn regressors by default.
 
@@ -298,16 +300,18 @@ class Cobra(BaseEstimator):
         -------
         self : returns an instance of self.
         """
-        self.machines_ = {}
+        self.estimators_ = {}
         for machine in machine_list:
             if machine == 'lasso':
-                self.machines_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'tree':
-                self.machines_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'ridge':
-                self.machines_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
+                self.estimators_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
             if machine == 'random_forest':
-                self.machines_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+            if machine == 'svm':
+                self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
 
         return self
 
@@ -331,7 +335,7 @@ class Cobra(BaseEstimator):
         self : returns an instance of self.
         """
 
-        self.machines_[machine_name] = machine
+        self.estimators_[machine_name] = machine
 
         return self
 
@@ -353,8 +357,8 @@ class Cobra(BaseEstimator):
         self.machine_predictions_ = {}
         self.all_predictions_ = np.array([])
         if predictions is None:
-            for machine in self.machines_:
-                self.machine_predictions_[machine] = self.machines_[machine].predict(self.X_l_)
+            for machine in self.estimators_:
+                self.machine_predictions_[machine] = self.estimators_[machine].predict(self.X_l_)
                 # all_predictions_ is used in the diagnostics class, and for initialising epsilon
                 self.all_predictions_ = np.append(self.all_predictions_, self.machine_predictions_[machine])
 

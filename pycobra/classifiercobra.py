@@ -72,7 +72,7 @@ class ClassifierCobra(BaseEstimator):
         self.X_l_ = X_l
         self.y_k_ = y_k
         self.y_l_ = y_l
-        self.machines_ = {}
+        self.estimators_ = {}
 
         # try block to pass scikit-learn estimator check.
         try:
@@ -109,9 +109,9 @@ class ClassifierCobra(BaseEstimator):
 
         # dictionary mapping machine to points selected
         select = {}
-        for machine in self.machines_:
+        for machine in self.estimators_:
             # machine prediction
-            label = self.machines_[machine].predict(X)
+            label = self.estimators_[machine].predict(X)
             select[machine] = set()
             # iterating from l to n
             # replace with numpy iteration
@@ -175,7 +175,7 @@ class ClassifierCobra(BaseEstimator):
         X = check_array(X)
 
         if M is None:
-            M = len(self.machines_)
+            M = len(self.estimators_)
         if X.ndim == 1:
             return self.pred(X.reshape(1, -1), info=info, M=M)
 
@@ -253,13 +253,13 @@ class ClassifierCobra(BaseEstimator):
         """
         for machine in machine_list:
             if machine == 'svm':
-                self.machines_['svm'] = svm.SVC().fit(self.X_k_, self.y_k_)
+                self.estimators_['svm'] = svm.SVC().fit(self.X_k_, self.y_k_)
             if machine == 'knn':
-                self.machines_['knn'] = neighbors.KNeighborsClassifier().fit(self.X_k_, self.y_k_)
+                self.estimators_['knn'] = neighbors.KNeighborsClassifier().fit(self.X_k_, self.y_k_)
             if machine == 'sgd':
-                self.machines_['sgd'] = SGDClassifier(loss="hinge", penalty="l2").fit(self.X_k_, self.y_k_)
+                self.estimators_['sgd'] = SGDClassifier(loss="hinge", penalty="l2").fit(self.X_k_, self.y_k_)
             if machine == 'tree':
-                self.machines_['tree'] = tree.DecisionTreeClassifier().fit(self.X_k_, self.y_k_)
+                self.estimators_['tree'] = tree.DecisionTreeClassifier().fit(self.X_k_, self.y_k_)
 
         return self
 
@@ -283,7 +283,7 @@ class ClassifierCobra(BaseEstimator):
         self : returns an instance of self.
         """
 
-        self.machines_[machine_name] = machine
+        self.estimators_[machine_name] = machine
 
         return self
 
@@ -304,7 +304,7 @@ class ClassifierCobra(BaseEstimator):
         """
         self.machine_predictions_ = {}
         if predictions is None:
-            for machine in self.machines_:
-                self.machine_predictions_[machine] = self.machines_[machine].predict(self.X_l_)
+            for machine in self.estimators_:
+                self.machine_predictions_[machine] = self.estimators_[machine].predict(self.X_l_)
 
         return self
