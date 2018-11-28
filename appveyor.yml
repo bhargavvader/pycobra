@@ -1,0 +1,12 @@
+build: false
+
+install:
+  - pip install --upgrade pip
+  - pip install wheel
+  - pip install numpy scipy
+  - pip install scikit-learn
+  - pip install matplotlib
+  - pip install coverage
+
+test_script:
+  - python tests.py --with-coverage --cover-package=pycobra
