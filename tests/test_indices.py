@@ -9,6 +9,9 @@ from pycobra.diagnostics import Diagnostics
 from pycobra.visualisation import Visualisation
 
 import logging
+import matplotlib
+matplotlib.use('agg')
+
 
 class TestVisualisation(unittest.TestCase):
     def setUp(self):
@@ -43,7 +46,7 @@ class TestVisualisation(unittest.TestCase):
         self.ewa_vis = Visualisation(self.ewa, self.test_data[0:4], self.test_response[0:4])
 
     def test_indice_info(self):
-        expected_indices, expected_mse = ('ridge', 'lasso'), 0.3516475171334160
+        expected_indices, expected_mse = ('ridge', 'lasso', 'svm'), 0.3516475171334160
         self.assertEqual(sorted(expected_indices), sorted(self.indices[0]))
         self.assertAlmostEqual(expected_mse, self.mse[0][0])
 
@@ -68,6 +71,14 @@ class TestVisualisation(unittest.TestCase):
         data = self.ewa_vis.boxplot(info=True)
         self.assertEqual(len(data[0]), expected_data_len)
 
+    def test_QQ(self):
+        self.cobra_vis.QQ()
+
+    def test_color_cobra(self):
+        self.cobra_vis.color_cobra(indice_info=self.indices, single=True)
+
+    def test_machines(self):
+        self.cobra_vis.plot_machines()
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)

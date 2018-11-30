@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import matplotlib
-import nose
+import pytest
 import sys
 
 matplotlib.use('agg')
 
-nose.main()
+pytest.main(['--cov'])
