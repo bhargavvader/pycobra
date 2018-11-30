@@ -11,11 +11,13 @@ install:
   - pip install matplotlib
   - pip install coverage
   - pip install pytest
+  - pip install pytest-cov
 # command to run tests
 
 script:
   # - cd $HOME/build/bhargavvavder/pycobra
-  - python tests.py --with-coverage --cover-package=pycobra
+  # - python tests.py --with-coverage --cover-package=pycobra
+  - python tests.py
 # script: travis_wait 20 nosetests --with-coverage
 after_sucess: 
   - coveralls

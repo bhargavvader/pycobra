@@ -6,4 +6,4 @@ import sys
 
 matplotlib.use('agg')
 
-pytest.main()
+pytest.main(['--cov'])
