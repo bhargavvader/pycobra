@@ -1,6 +1,7 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
 import unittest
+import pytest
 import numpy as np
 
 from pycobra.cobra import Cobra
@@ -47,12 +48,14 @@ class TestOptimal(unittest.TestCase):
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse)
 
+    @pytest.mark.slow
     def test_alpha_grid(self):
         (alpha, epsilon), mse = self.cobra_diagnostics.optimal_alpha_grid(self.test_data[0], self.test_response[0])
         expected_alpha, expected_mse = 3, 4.750490070210303e-08
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse[0])
-
+    
+    @pytest.mark.slow
     def test_machines_grid(self):
         (machines, epsilon), mse = self.cobra_diagnostics.optimal_machines_grid(self.test_data[0], self.test_response[0])
         expected_machines, expected_mse = ('ridge',), 0.00026522376609884802

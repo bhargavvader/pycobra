@@ -1,6 +1,7 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
 import unittest
+import pytest
 import numpy as np
 
 from pycobra.cobra import Cobra
@@ -62,6 +63,7 @@ class TestVisualisation(unittest.TestCase):
         self.assertAlmostEqual(min_bound, vor_.min_bound[0])
         self.assertAlmostEqual(max_bound, vor_.max_bound[0])
 
+    @pytest.mark.slow 
     def test_boxplot(self):
 
         expected_data_len =  100
