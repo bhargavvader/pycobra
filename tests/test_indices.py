@@ -47,7 +47,7 @@ class TestVisualisation(unittest.TestCase):
         self.ewa_vis = Visualisation(self.ewa, self.test_data[0:4], self.test_response[0:4])
 
     def test_indice_info(self):
-        expected_indices, expected_mse = ('ridge', 'lasso'), 0.3516475171334160
+        expected_indices, expected_mse = ('ridge', 'lasso', 'svm'), 0.3516475171334160
         self.assertEqual(sorted(expected_indices), sorted(self.indices[0]))
         self.assertAlmostEqual(expected_mse, self.mse[0][0])
 

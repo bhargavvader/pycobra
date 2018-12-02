@@ -6,4 +6,4 @@ import sys
 
 matplotlib.use('agg')
 
-pytest.main(['--cov'])
+pytest.main(['-m not slowtest', '--cov', '/tests'])
