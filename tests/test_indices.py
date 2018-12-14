@@ -38,19 +38,19 @@ class TestVisualisation(unittest.TestCase):
         self.test_data = X_test
         self.test_response = Y_test
         self.cobra = cobra
-        self.cobra_vis = Visualisation(self.cobra, self.test_data[0:4], self.test_response[0:4])
+        self.cobra_vis = Visualisation(self.cobra, self.test_data[0:4], self.test_response[0:4], random_state=0)
         self.indices, self.mse = self.cobra_vis.indice_info(self.test_data[0:4], self.test_response[0:4], epsilon=self.cobra.epsilon)
 
         ewa = Ewa(random_state=0)
         ewa.fit(X_train, Y_train)
         self.ewa = ewa
-        self.ewa_vis = Visualisation(self.ewa, self.test_data[0:4], self.test_response[0:4])
+        self.ewa_vis = Visualisation(self.ewa, self.test_data[0:4], self.test_response[0:4], random_state=0)
 
     def test_indice_info(self):
-        expected_indices, expected_mse = ('ridge', 'lasso'), 0.3516475171334160
+        expected_indices, expected_mse = ('svm','lasso'), 0.32062807318499864
         self.assertEqual(sorted(expected_indices), sorted(self.indices[0]))
         self.assertAlmostEqual(expected_mse, self.mse[0][0])
-
+    
     def test_voronoi(self):
 
         vor = self.cobra_vis.voronoi(indice_info=self.indices)

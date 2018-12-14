@@ -3,7 +3,7 @@
 from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import SVR
+from sklearn.svm import LinearSVR
 
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
@@ -312,7 +312,7 @@ class Cobra(BaseEstimator):
                 if machine == 'random_forest':
                     self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
                 if machine == 'svm':
-                    self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
+                    self.estimators_['svm'] = LinearSVR(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             except ValueError:
                 continue
         return self
