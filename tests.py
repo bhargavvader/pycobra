@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import matplotlib
-import nose
+import pytest
 import sys
+import warnings
 
 matplotlib.use('agg')
+warnings.filterwarnings("ignore", category=FutureWarning)
 
-nose.main()
+
+pytest.main(['-m not slowtest', '--cov', '/tests'])

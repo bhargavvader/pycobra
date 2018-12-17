@@ -417,10 +417,10 @@ class Visualisation():
                 ewa.load_machine_weights(self.aggregate.beta)
                 X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
                 for machine in self.estimators:
-                    if "Cobra" in machine:
+                    if "EWA" in machine:
                         self.estimators[machine].fit(X, y)
                     else:
-                        self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
+                        self.estimators[machine].fit(ewa.X_k_, ewa.y_k_)
 
                     preds = self.estimators[machine].predict(X_test)
 

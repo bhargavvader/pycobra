@@ -46,7 +46,7 @@ class TestPrediction(unittest.TestCase):
         self.assertAlmostEqual(expected, result)
 
     def test_ewa_predict(self):
-        expected = 2.7716310515173239
+        expected = 2.7656847636961603
         result = self.ewa.predict(self.test_data[0].reshape(1, -1))
         self.assertAlmostEqual(expected, result[0])        
 

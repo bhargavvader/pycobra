@@ -1,6 +1,7 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
 import unittest
+import pytest
 import numpy as np
 
 from pycobra.cobra import Cobra
@@ -38,48 +39,50 @@ class TestOptimal(unittest.TestCase):
         self.test_response = Y_test
         self.cobra = cobra
         self.ewa = ewa
-        self.cobra_diagnostics = Diagnostics(self.cobra)
-        self.cobra_diagnostics_ewa = Diagnostics(self.ewa)
+        self.cobra_diagnostics = Diagnostics(self.cobra, random_state=0)
+        self.cobra_diagnostics_ewa = Diagnostics(self.ewa, random_state=0)
 
     def test_alpha(self):
         alpha, mse = self.cobra_diagnostics.optimal_alpha(self.test_data, self.test_response)
-        expected_alpha, expected_mse = 4, 0.068051089937708101
+        expected_alpha, expected_mse = 5, 0.06941483395407926
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse)
 
+    @pytest.mark.slow
     def test_alpha_grid(self):
         (alpha, epsilon), mse = self.cobra_diagnostics.optimal_alpha_grid(self.test_data[0], self.test_response[0])
-        expected_alpha, expected_mse = 1, 0.0133166
+        expected_alpha, expected_mse = 1, 0.01331659692231877
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse[0])
-
+    
+    @pytest.mark.slow
     def test_machines_grid(self):
         (machines, epsilon), mse = self.cobra_diagnostics.optimal_machines_grid(self.test_data[0], self.test_response[0])
-        expected_machines, expected_mse = ('ridge',), 0.00026522376609884802
+        expected_machines, expected_mse = ('svm','ridge'), 1.92151481985802e-05
         self.assertEqual(sorted(expected_machines), sorted(machines))
         self.assertAlmostEqual(expected_mse, mse[0])
 
     def test_machines(self):
         machines, mse = self.cobra_diagnostics.optimal_machines(self.test_data, self.test_response)
-        expected_machines, expected_mse = ('ridge','tree', 'random_forest'), 0.066681946568334649
+        expected_machines, expected_mse = ('random_forest', 'ridge', 'tree'), 0.06668194656833465
         self.assertEqual(sorted(expected_machines), sorted(machines))
         self.assertAlmostEqual(expected_mse, mse)
 
     def test_epsilon(self):
         epsilon, mse = self.cobra_diagnostics.optimal_epsilon(self.test_data, self.test_response)
-        expected_epsilon, expected_mse = 0.35243013347224278, 0.062335364376335425
+        expected_epsilon, expected_mse = 0.3725127409849326, 0.06289208580651373
         self.assertAlmostEqual(expected_epsilon, epsilon)
         self.assertAlmostEqual(expected_mse, mse)
 
     def test_split(self):
         split, mse = self.cobra_diagnostics.optimal_split(self.test_data, self.test_response)
-        expected_split, expected_mse = (0.5, 0.5), 0.068051089937708101
+        expected_split, expected_mse = (0.5, 0.5), 0.06941483395407926
         self.assertEqual(expected_split, split)
         self.assertAlmostEqual(expected_mse, mse)
 
     def test_beta(self):
         beta, mse = self.cobra_diagnostics_ewa.optimal_beta(self.test_data, self.test_response)
-        expected_beta, expected_mse = 0.1, 0.074666199403044226
+        expected_beta, expected_mse = 0.1, 0.07838339131485009
         self.assertAlmostEqual(expected_beta, beta)
         self.assertAlmostEqual(expected_mse, mse)
 
