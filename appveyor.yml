@@ -1,7 +1,7 @@
 build: false
 
 install:
-  - pip install --upgrade pip
+  - python -m pip install -U pip
   - pip install wheel
   - pip install numpy scipy
   - pip install scikit-learn
