@@ -9,4 +9,4 @@ matplotlib.use('agg')
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-pytest.main(['-m not slowtest', '--cov', '/tests'])
+pytest.main(['-k-slow', '--cov', '/tests'])
