@@ -46,45 +46,45 @@ class TestOptimal(unittest.TestCase):
         alpha, mse = self.cobra_diagnostics.optimal_alpha(self.test_data, self.test_response)
         expected_alpha, expected_mse = 5, 0.06941483395407926
         self.assertEqual(expected_alpha, alpha)
-        self.assertAlmostEqual(expected_mse, mse)
+        self.assertAlmostEqual(expected_mse, mse, places=3)
 
     @pytest.mark.slow
     def test_alpha_grid(self):
         (alpha, epsilon), mse = self.cobra_diagnostics.optimal_alpha_grid(self.test_data[0], self.test_response[0])
         expected_alpha, expected_mse = 1, 0.01331659692231877
         self.assertEqual(expected_alpha, alpha)
-        self.assertAlmostEqual(expected_mse, mse[0])
+        self.assertAlmostEqual(expected_mse, mse[0], places=3)
     
     @pytest.mark.slow
     def test_machines_grid(self):
         (machines, epsilon), mse = self.cobra_diagnostics.optimal_machines_grid(self.test_data[0], self.test_response[0])
         expected_machines, expected_mse = ('svm','ridge'), 1.92151481985802e-05
         self.assertEqual(sorted(expected_machines), sorted(machines))
-        self.assertAlmostEqual(expected_mse, mse[0])
+        self.assertAlmostEqual(expected_mse, mse[0], places=3)
 
     def test_machines(self):
         machines, mse = self.cobra_diagnostics.optimal_machines(self.test_data, self.test_response)
         expected_machines, expected_mse = ('random_forest', 'ridge', 'tree'), 0.06668194656833465
         self.assertEqual(sorted(expected_machines), sorted(machines))
-        self.assertAlmostEqual(expected_mse, mse)
+        self.assertAlmostEqual(expected_mse, mse, places=3)
 
     def test_epsilon(self):
         epsilon, mse = self.cobra_diagnostics.optimal_epsilon(self.test_data, self.test_response)
         expected_epsilon, expected_mse = 0.3725127409849326, 0.06289208580651373
-        self.assertAlmostEqual(expected_epsilon, epsilon)
-        self.assertAlmostEqual(expected_mse, mse)
+        self.assertAlmostEqual(expected_epsilon, epsilon, places=3)
+        self.assertAlmostEqual(expected_mse, mse, places=3)
 
     def test_split(self):
         split, mse = self.cobra_diagnostics.optimal_split(self.test_data, self.test_response)
         expected_split, expected_mse = (0.5, 0.5), 0.06941483395407926
         self.assertEqual(expected_split, split)
-        self.assertAlmostEqual(expected_mse, mse)
+        self.assertAlmostEqual(expected_mse, mse, places=3)
 
     def test_beta(self):
         beta, mse = self.cobra_diagnostics_ewa.optimal_beta(self.test_data, self.test_response)
         expected_beta, expected_mse = 0.1, 0.07838339131485009
-        self.assertAlmostEqual(expected_beta, beta)
-        self.assertAlmostEqual(expected_mse, mse)
+        self.assertAlmostEqual(expected_beta, beta, places=3)
+        self.assertAlmostEqual(expected_mse, mse, places=3)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
