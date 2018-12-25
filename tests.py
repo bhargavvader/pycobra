@@ -9,4 +9,4 @@ matplotlib.use('agg')
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-pytest.main(['-k-slow', '--cov=pycobra', '/tests'])
+pytest.main(['-k-slow', '--cov=pycobra'])
