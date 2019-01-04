@@ -44,7 +44,7 @@ class TestOptimal(unittest.TestCase):
 
     def test_alpha(self):
         alpha, mse = self.cobra_diagnostics.optimal_alpha(self.test_data, self.test_response)
-        expected_alpha, expected_mse = 5, 0.06941483395407926
+        expected_alpha, expected_mse = 5, 0.06878994911340372
         self.assertEqual(expected_alpha, alpha)
         self.assertAlmostEqual(expected_mse, mse, places=3)
 
@@ -70,13 +70,12 @@ class TestOptimal(unittest.TestCase):
 
     def test_epsilon(self):
         epsilon, mse = self.cobra_diagnostics.optimal_epsilon(self.test_data, self.test_response)
-        expected_epsilon, expected_mse = 0.3725127409849326, 0.06289208580651373
+        expected_epsilon= 0.3709790878655187
         self.assertAlmostEqual(expected_epsilon, epsilon, places=3)
-        self.assertAlmostEqual(expected_mse, mse, places=3)
 
     def test_split(self):
         split, mse = self.cobra_diagnostics.optimal_split(self.test_data, self.test_response)
-        expected_split, expected_mse = (0.5, 0.5), 0.06941483395407926
+        expected_split, expected_mse = (0.5, 0.5), 0.06878994911340372
         self.assertEqual(expected_split, split)
         self.assertAlmostEqual(expected_mse, mse, places=3)
 
