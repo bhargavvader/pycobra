@@ -17,13 +17,14 @@ import logging
 import numbers
 
 
-logger = logging.getLogger('pycobra.mixcobra')
+logger = logging.getLogger('pycobra.kernelcobra')
 
 
-class MixCobra(BaseEstimator):
+class KernelCobra(BaseEstimator):
     """
-    Regression algorithm as introduced by Fischer and Mougeot in
-    Aggregation Using input-output trade-off
+    Regression algorithm as introduced by
+    Kernel-COBRA: A combined regression-classification strategy using Kernels.
+    Based on the paper by Guedj, Srinivasa Desikan [2018].
 
     Parameters
     ----------
@@ -34,7 +35,7 @@ class MixCobra(BaseEstimator):
 
     Attributes
     ----------
-    machines_: A dictionary which maps machine names to the machine objects.
+    estimators_: A dictionary which maps machine names to the machine objects.
             The machine object must have a predict method for it to be used during aggregation.
 
     machine_predictions_: A dictionary which maps machine name to it's predictions over X_l
@@ -44,8 +45,9 @@ class MixCobra(BaseEstimator):
 
     """
 
-    def __init__(self, random_state=None, machines=None):
+    def __init__(self, random_state=None):
         self.random_state = random_state
+
 
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
@@ -92,9 +94,9 @@ class MixCobra(BaseEstimator):
         return self
 
 
-    def pred(self, X, kernel=None, metric=None, alpha=1, beta=1, bandwidth=1, **kwargs):
+    def pred(self, X, kernel=None, metric=None, bandwidth=1, **kwargs):
         """
-        Performs the MixCobra aggregation scheme, used in predict method.
+        Performs the Kernel-COBRA aggregation scheme, used in predict method.
 
         Parameters
         ----------
@@ -124,11 +126,11 @@ class MixCobra(BaseEstimator):
             for index, value in np.ndenumerate(self.machine_predictions_[machine]):
                 if metric is not None:
                     try:
-                        a[index] += metric(value, val, kwargs["metric_params"]) + math.pow(np.linalg.norm((self.X_l_[index] - X) / beta), 2)
+                        a[index] += metric(value, val, kwargs["metric_params"])
                     except KeyError:
-                        a[index] += metric(value, val) + math.pow(np.linalg.norm((self.X_l_[index] - X) / beta), 2)
+                        a[index] += metric(value, val)
                 else:
-                    a[index] += math.pow((value - val) / alpha, 2) + math.pow(np.linalg.norm((self.X_l_[index] - X) / beta), 2)
+                    a[index] += math.fabs(value - val)
 
         # normalise the array
         if kernel is not None:
@@ -137,15 +139,14 @@ class MixCobra(BaseEstimator):
             except KeyError:
                 a = np.divide(kernel(a), np.sum(kernel(a)))
         else:
-            # a = np.divide(a, np.sum(a))
             a = np.divide(np.exp(- bandwidth * a), np.sum(np.exp(- bandwidth * a)))
 
         return np.sum(np.multiply(self.y_l_, a))
 
 
-    def predict(self, X, kernel=None, metric=None, alpha=1, beta=1, **kwargs):
+    def predict(self, X, kernel=None, metric=None, bandwidth=1, **kwargs):
         """
-        Performs the MixCobra aggregation scheme, calls pred.
+        Performs the Kernel-COBRA aggregation scheme, calls pred.
 
         Parameters
         ----------
@@ -170,6 +171,7 @@ class MixCobra(BaseEstimator):
         """
 
         X = check_array(X)
+
         if X.ndim == 1:
             return self.pred(X.reshape(1, -1))
 
@@ -177,7 +179,7 @@ class MixCobra(BaseEstimator):
         avg_points = 0
         index = 0
         for vector in X:
-            result[index] = self.pred(vector.reshape(1, -1), kernel=kernel, metric=metric, alpha=alpha, beta=beta, **kwargs)
+            result[index] = self.pred(vector.reshape(1, -1), kernel=kernel, metric=metric, bandwidth=bandwidth, **kwargs)
             index += 1
 
         return result
@@ -225,7 +227,7 @@ class MixCobra(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest']):
+    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm']):
         """
         Loads 4 different scikit-learn regressors by default.
 
@@ -249,6 +251,7 @@ class MixCobra(BaseEstimator):
                 self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
             if machine == 'svm':
                 self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
+
         return self
 
 
