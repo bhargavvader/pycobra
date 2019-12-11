@@ -3,6 +3,8 @@ import math
 import itertools
 
 import numpy as np
+import pandas as pd
+import seaborn as sns
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -13,6 +15,8 @@ from sklearn.utils import shuffle
 
 from pycobra.diagnostics import Diagnostics
 from pycobra.cobra import Cobra
+from pycobra.kernelcobra import KernelCobra
+
 from pycobra.ewa import Ewa
 from pycobra.classifiercobra import ClassifierCobra
 
@@ -244,6 +248,7 @@ class Visualisation():
         self.plot_size = plot_size
         self.estimators = estimators
         # load results so plotting doesn't need parameters
+        self.kwargs = kwargs
         self.machine_test_results = {}
         self.machine_MSE = {}
         
@@ -260,14 +265,20 @@ class Visualisation():
                 self.machine_error[machine] = 1 - accuracy_score(self.y_test, self.machine_test_results[machine])
 
 
-        names_dict = {Cobra: "Cobra", Ewa: "EWA"}
+        names_dict = {Cobra: "Cobra", Ewa: "EWA", KernelCobra: "KernelCobra"}
         for name in names_dict:
-            if type(aggregate) is name:
-                self.machine_test_results[names_dict[name]] = self.aggregate.predict(self.X_test)
+            if type(aggregate) == name:
+                if type(aggregate) == KernelCobra:
+                    self.machine_test_results[names_dict[name]] = self.aggregate.predict(self.X_test, bandwidth=kwargs["bandwidth_kernel"])
+                else:
+                    self.machine_test_results[names_dict[name]] = self.aggregate.predict(self.X_test)
                 self.machine_MSE[names_dict[name]] = mean_squared_error(self.y_test, self.machine_test_results[names_dict[name]])            
 
         for machine in self.estimators:
-            self.machine_test_results[machine] = self.estimators[machine].predict(self.X_test)
+            if type(self.estimators[machine]) == KernelCobra:
+                self.machine_test_results[machine] = self.estimators[machine].predict(self.X_test, bandwidth=kwargs["bandwidth_kernel"])
+            else:
+                self.machine_test_results[machine] = self.estimators[machine].predict(self.X_test)
             self.machine_MSE[machine] = mean_squared_error(self.y_test, self.machine_test_results[machine])
 
 
@@ -353,7 +364,7 @@ class Visualisation():
         return plt
 
 
-    def boxplot(self, reps=100, info=False):
+    def boxplot(self, reps=100, info=False, dataframe=None, kind="normal"):
         """
         Plots boxplots of machines.
 
@@ -366,105 +377,177 @@ class Visualisation():
             Returns data 
 
         """
-        if type(self.aggregate) is Cobra:
 
-            MSE = {k: [] for k, v in self.estimators.items()}
-            MSE["Cobra"] = []
-            for i in range(0, reps):
-                cobra = Cobra(random_state=self.random_state, epsilon=self.aggregate.epsilon)
-                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
-                cobra.fit(X, y, default=False)
-                cobra.split_data(shuffle_data=True)
+        kwargs = self.kwargs
+        if dataframe is None:
+            if type(self.aggregate) is Cobra:
 
-                for machine in self.aggregate.estimators_:
-                    self.aggregate.estimators_[machine].fit(cobra.X_k_, cobra.y_k_)
-                    cobra.load_machine(machine, self.aggregate.estimators_[machine])
+                MSE = {k: [] for k, v in self.estimators.items()}
+                MSE["Cobra"] = []
+                for i in range(0, reps):
+                    cobra = Cobra(epsilon=self.aggregate.epsilon)
+                    X, y = shuffle(self.aggregate.X_, self.aggregate.y_)
+                    cobra.fit(X, y, default=False)
+                    cobra.split_data(shuffle_data=True)
 
-                cobra.load_machine_predictions()
-                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                    for machine in self.aggregate.estimators_:
+                        self.aggregate.estimators_[machine].fit(cobra.X_k_, cobra.y_k_)
+                        cobra.load_machine(machine, self.aggregate.estimators_[machine])
 
+                    cobra.load_machine_predictions()
 
-                for machine in self.estimators:
-                    if "Cobra" in machine:
-                        self.estimators[machine].fit(X, y)
-                    else:
-                        self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
-                    preds = self.estimators[machine].predict(X_test)
-   
-                    MSE[machine].append(mean_squared_error(y_test, preds))
+                    for machine in self.estimators:
+                        if "Cobra" in machine:
+                            self.estimators[machine].fit(X, y)
+                        else:
+                            self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
+                        try:
+                            if type(self.estimators[machine]) == KernelCobra:
+                                preds = self.estimators[machine].predict(self.X_test, bandwidth=kwargs["bandwidth_kernel"])
+                            else:
+                                preds = self.estimators[machine].predict(self.X_test)
+                        except KeyError:
+                            preds = self.estimators[machine].predict(self.X_test)                      
+                        
+                        MSE[machine].append(mean_squared_error(self.y_test, preds))
 
-                MSE["Cobra"].append(mean_squared_error(y_test, cobra.predict(X_test)))
+                    MSE["Cobra"].append(mean_squared_error(self.y_test, cobra.predict(self.X_test)))
 
-            data, labels = [], []
-            for machine in MSE:
-                data.append(MSE[machine])
-                labels.append(machine)
+                try:
+                    dataframe = pd.DataFrame(data=MSE)
+                except ValueError:
+                    return MSE
 
-        if type(self.aggregate) is Ewa:
+            if type(self.aggregate) is KernelCobra:
 
-            MSE = {k: [] for k, v in self.aggregate.estimators_.items()}
-            MSE["EWA"] = []
-            for i in range(0, reps):
-                ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
-                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
-                ewa.fit(X, y, default=False)
-                ewa.split_data(shuffle_data=True)
+                MSE = {k: [] for k, v in self.estimators.items()}
+                MSE["KernalCobra"] = []
+                for i in range(0, reps):
+                    kernel = KernelCobra()
+                    X, y = shuffle(self.aggregate.X_, self.aggregate.y_)
+                    kernel.fit(X, y, default=False)
+                    kernel.split_data(shuffle_data=True)
 
-                for machine in self.estimators:
-                    self.aggregate.estimators_[machine].fit(ewa.X_k_, ewa.y_k_)
-                    ewa.load_machine(machine, self.aggregate.estimators_[machine])
+                    for machine in self.aggregate.estimators_:
+                        self.aggregate.estimators_[machine].fit(kernel.X_k_, kernel.y_k_)
+                        kernel.load_machine(machine, self.aggregate.estimators_[machine])
 
-                ewa.load_machine_weights(self.aggregate.beta)
-                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in self.estimators:
-                    if "EWA" in machine:
-                        self.estimators[machine].fit(X, y)
-                    else:
-                        self.estimators[machine].fit(ewa.X_k_, ewa.y_k_)
+                    kernel.load_machine_predictions()
 
-                    preds = self.estimators[machine].predict(X_test)
+                    for machine in self.estimators:
+                        if "Cobra" in machine:
+                            self.estimators[machine].fit(X, y)
+                        else:
+                            self.estimators[machine].fit(cobra.X_k_, cobra.y_k_)
+                        
+                        try:
+                            if type(self.estimators[machine]) == KernelCobra:
+                                preds = self.estimators[machine].predict(self.X_test, bandwidth=kwargs["bandwidth_kernel"])
+                            else:
+                                preds = self.estimators[machine].predict(self.X_test)
+                        except KeyError:
+                            preds = self.estimators[machine].predict(self.X_test)
 
-                    MSE[machine].append(mean_squared_error(y_test, preds))
-                
-                MSE["EWA"].append(mean_squared_error(y_test, ewa.predict(X_test)))
+                        MSE[machine].append(mean_squared_error(self.y_test, preds))
 
-            data, labels = [], []
-            for machine in MSE:
-                data.append(MSE[machine])
-                labels.append(machine)
+                    MSE["KernelCobra"].append(mean_squared_error(self.y_test, kernel.predict(self.X_test, bandwidth=kwargs[bandwidth_kernel])))
 
-        if type(self.aggregate) is ClassifierCobra:
-
-            errors = {k: [] for k, v in self.aggregate.estimators_.items()}
-            errors["ClassifierCobra"] = []
-            for i in range(0, reps):
-                cc = ClassifierCobra(random_state=self.random_state)
-                X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
-                cc.fit(X, y, default=False)
-                cc.split_data(shuffle_data=True)
-
-                for machine in self.aggregate.estimators_:
-                    self.aggregate.estimators_[machine].fit(cc.X_k_, cc.y_k_)
-                    cc.load_machine(machine, self.aggregate.estimators_[machine])
-
-                cc.load_machine_predictions()
-                X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
-                for machine in self.estimators: 
-                    errors[machine].append(1 - accuracy_score(y_test, self.estimators[machine].predict(X_test)))
-                errors["ClassifierCobra"].append(1 - accuracy_score(y_test, cc.predict(X_test)))
-
-            data, labels = [], []
-            for machine in errors:
-                data.append(errors[machine])
-                labels.append(machine)
+                try:
+                    dataframe = pd.DataFrame(data=MSE)
+                except ValueError:
+                    return MSE
 
 
+            if type(self.aggregate) is Ewa:
+
+                MSE = {k: [] for k, v in self.aggregate.estimators_.items()}
+                MSE["EWA"] = []
+                for i in range(0, reps):
+                    ewa = Ewa(random_state=self.random_state, beta=self.aggregate.beta)
+                    X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
+                    ewa.fit(X, y, default=False)
+                    ewa.split_data(shuffle_data=True)
+
+                    for machine in self.estimators:
+                        self.aggregate.estimators_[machine].fit(ewa.X_k_, ewa.y_k_)
+                        ewa.load_machine(machine, self.aggregate.estimators_[machine])
+
+                    ewa.load_machine_weights(self.aggregate.beta)
+                    X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                    for machine in self.estimators:
+                        if "EWA" in machine:
+                            self.estimators[machine].fit(X, y)
+                        else:
+                            self.estimators[machine].fit(ewa.X_k_, ewa.y_k_)
+                        try:
+                            if type(self.estimators[machine]) == KernelCobra:
+                                preds = self.estimators[machine].predict(self.X_test, bandwidth=kwargs["bandwidth_kernel"])
+                            else:
+                                preds = self.estimators[machine].predict(self.X_test)
+                        except KeyError:
+                            preds = self.estimators[machine].predict(self.X_test)                      
+                        MSE[machine].append(mean_squared_error(y_test, preds))
+                    
+                    MSE["EWA"].append(mean_squared_error(y_test, ewa.predict(X_test)))
+
+                try:
+                    dataframe = pd.DataFrame(data=MSE)
+                except ValueError:
+                    return MSE
+
+            if type(self.aggregate) is ClassifierCobra:
+
+                errors = {k: [] for k, v in self.aggregate.estimators_.items()}
+                errors["ClassifierCobra"] = []
+                for i in range(0, reps):
+                    cc = ClassifierCobra(random_state=self.random_state)
+                    X, y = shuffle(self.aggregate.X_, self.aggregate.y_, random_state=self.aggregate.random_state)
+                    cc.fit(X, y, default=False)
+                    cc.split_data(shuffle_data=True)
+
+                    for machine in self.aggregate.estimators_:
+                        self.aggregate.estimators_[machine].fit(cc.X_k_, cc.y_k_)
+                        cc.load_machine(machine, self.aggregate.estimators_[machine])
+
+                    cc.load_machine_predictions()
+                    X_test, y_test = shuffle(self.X_test, self.y_test, random_state=self.aggregate.random_state)
+                    for machine in self.estimators: 
+                        errors[machine].append(1 - accuracy_score(y_test, self.estimators[machine].predict(X_test)))
+                    errors["ClassifierCobra"].append(1 - accuracy_score(y_test, cc.predict(X_test)))
+
+                try:
+                    dataframe = pd.DataFrame(data=errors)
+                except ValueError:
+                    return errors
+        
+
+
+        # code for different boxplot styles using the python graph gallery tutorial:
+        # https://python-graph-gallery.com/39-hidden-data-under-boxplot/
+
+        sns.set(style="whitegrid")
+
+        if kind == "normal":
+            sns.boxplot(data=dataframe)
+            plt.title("Boxplot")
+
+        if kind == "violin":
+            sns.violinplot(data=dataframe)
+            plt.title("Violin Plot")
+
+        if kind == "jitterplot":
+            ax = sns.boxplot(data=dataframe)
+            ax = sns.stripplot(data=dataframe, color="orange", jitter=0.2, size=2.5)
+            plt.title("Boxplot with jitter", loc="left")
+
+        plt.ylabel("Mean Squared Errors")
+        plt.xlabel("Estimators")
         plt.figure(figsize=(self.plot_size, self.plot_size))
-        plt.boxplot(data, labels=labels)
         plt.show()
+
         
         if info:
-            return data        
+            return dataframe
 
     def indice_info(self, X_test=None, y_test=None, epsilon=None, line_points=200):
         """

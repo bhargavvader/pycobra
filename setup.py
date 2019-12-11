@@ -8,7 +8,7 @@ DESCRIPTION = 'A set of python modules for ensemble learning and visualisation'
 with open('README.rst') as f:
     LONG_DESCRIPTION = f.read()
 
-version = "0.2.3"
+version = "0.2.4"
 setup(name='pycobra',
       version=version,
       description='Python implementation of COBRA algorithm with regression analysis',
@@ -29,7 +29,10 @@ setup(name='pycobra',
           'numpy',
           'scipy',
           'scikit-learn',
-          'matplotlib'
+          'matplotlib',
+          'seaborn',
+          'pandas'
+
       ],
       test_suite='tests',
       keywords=[

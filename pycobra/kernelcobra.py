@@ -3,7 +3,7 @@
 from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import LinearSVR
+from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
 
 from sklearn.utils import shuffle
@@ -18,14 +18,14 @@ import logging
 import numbers
 
 
-logger = logging.getLogger('pycobra.cobra')
+logger = logging.getLogger('pycobra.kernelcobra')
 
 
-class Cobra(BaseEstimator):
+class KernelCobra(BaseEstimator):
     """
-    COBRA: A combined regression strategy.
-    Based on the paper by Biau, Fischer, Guedj, Malley [2016].
-    This is a pythonic implementation of the original COBRA code.
+    Regression algorithm as introduced by
+    Kernel-COBRA: A combined regression-classification strategy using Kernels.
+    Based on the paper by Guedj, Srinivasa Desikan [2018].
 
     Parameters
     ----------
@@ -33,28 +33,23 @@ class Cobra(BaseEstimator):
         Set the state of the random number generator to pass on to shuffle and loading machines, to ensure
         reproducibility of your experiments, for example.
 
-    epsilon: float, optional
-        Epsilon value described in the paper which determines which points are selected for the aggregate.
-        Default value is determined by optimizing over a grid if test data is provided.
-        If not, a mean of the possible distances is chosen.
 
     Attributes
     ----------
-    machines_: A dictionary which maps machine names to the machine objects.
+    estimators_: A dictionary which maps machine names to the machine objects.
             The machine object must have a predict method for it to be used during aggregation.
 
     machine_predictions_: A dictionary which maps machine name to it's predictions over X_l
             This value is used to determine which points from y_l are used to aggregate.
 
-    all_predictions_: numpy array with all the predictions, to be used for epsilon manipulation.
+    all_predictions_: numpy array with all the predictions, to be used for bandwidth manipulation.
 
     """
 
-    def __init__(self, random_state=None, epsilon=None, machine_list='basic'):
+    def __init__(self, random_state=None, machine_list='basic'):
         self.random_state = random_state
-        self.epsilon = epsilon
         self.machine_list = machine_list
-    
+
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
         Parameters
@@ -100,54 +95,25 @@ class Cobra(BaseEstimator):
         return self
 
 
-    def set_epsilon(self, X_epsilon=None, y_epsilon=None, grid_points=50):
+    def pred(self, X, kernel=None, metric=None, bandwidth=1, **kwargs):
         """
-        Parameters
-        ----------
-
-        X_epsilon : shape = [n_samples, n_features]
-            Used if no epsilon is passed to find the optimal epsilon for data passed.
-
-        y_epsilon : array-like, shape = [n_samples]
-            Used if no epsilon is passed to find the optimal epsilon for data passed.
-
-        grid_points: int, optional
-            If no epsilon value is passed, this parameter controls how many points on the grid to traverse.
-   
-        """
-
-        # if no epsilon value is passed, we set up COBRA to perform CV and find an optimal epsilon.
-        if self.epsilon is None and X_epsilon is not None:
-            self.X_ = X_epsilon
-            self.y_ = y_epsilon
-            self.split_data()
-            self.load_default()
-            self.load_machine_predictions()
-            a, size = sorted(self.all_predictions_), len(self.all_predictions_)
-            res = [a[i + 1] - a[i] for i in range(size) if i+1 < size]
-            emin = min(res)
-            emax = max(a) - min(a)
-            erange = np.linspace(emin, emax, grid_points)
-            tuned_parameters = [{'epsilon': erange}]
-            clf = GridSearchCV(self, tuned_parameters, scoring="neg_mean_squared_error")
-            clf.fit(X_epsilon, y_epsilon)
-            self.epsilon = clf.best_params_["epsilon"]
-            self.estimators_, self.machine_predictions_ = {}, {}
-
-
-    def pred(self, X, alpha, info=False):
-        """
-        Performs the COBRA aggregation scheme, used in predict method.
+        Performs the Kernel-COBRA aggregation scheme, used in predict method.
 
         Parameters
         ----------
         X: array-like, [n_features]
 
-        alpha: int, optional
-            alpha refers to the number of machines the prediction must be close to to be considered during aggregation.
+        kernel: function, optional
+            kernel refers to the kernel method which we wish to use to perform the aggregation.
 
-        info: boolean, optional
-            If info is true the list of points selected in the aggregation is returned.
+        metric: function, optional
+            metric refers to the metric method which we wish to use to perform the aggregation.
+
+        bandwidth: float, optional
+            Bandwidth for the deafult kernel value (gaussian), and is set to 1.
+
+        kwargs requires you to pass arguments with "kernel_params" and "metric_params", if the custom kernel or metric
+        has more paramteres.        
 
         Returns
         -------
@@ -155,95 +121,68 @@ class Cobra(BaseEstimator):
 
         """
 
-        # dictionary mapping machine to points selected
-        select = {}
+        a = np.zeros(len(self.X_l_))
         for machine in self.estimators_:
-            # machine prediction
             val = self.estimators_[machine].predict(X)
-            select[machine] = set()
-            # iterating from l to n
-            # replace with numpy iteration
-            for count in range(0, len(self.X_l_)):
-                try:
-                    # if value is close to prediction, select the indice
-                    if math.fabs(self.machine_predictions_[machine][count] - val) <= self.epsilon:
-                        select[machine].add(count)
-                except (ValueError, TypeError) as e:
-                    logger.info("Error in indice selection")
-                    continue
+            for index, value in np.ndenumerate(self.machine_predictions_[machine]):
+                if metric is not None:
+                    try:
+                        a[index] += metric(value, val, kwargs["metric_params"])
+                    except KeyError:
+                        a[index] += metric(value, val)
+                else:
+                    a[index] += math.fabs(value - val)
 
-        points = []
-        # count is the indice number.
-        for count in range(0, len(self.X_l_)):
-            # row check is number of machines which picked up a particular point
-            row_check = 0
-            for machine in select:
-                if count in select[machine]:
-                    row_check += 1
-            if row_check == alpha:
-                points.append(count)
+        # normalise the array
+        if kernel is not None:
+            try:
+                a = np.divide(kernel(a, kwargs["kernel_params"]), np.sum(kernel(a, kwargs["kernel_params"])))
+            except KeyError:
+                a = np.divide(kernel(a), np.sum(kernel(a)))
+        else:
+            exp = np.nan_to_num(np.exp(- bandwidth * a))
+            a = np.nan_to_num(np.divide(exp, np.sum(exp)))
 
-        # if no points are selected, return 0
-        if len(points) == 0:
-            if info:
-                logger.info("No points were selected, prediction is 0")
-                return (0, 0)
-            return 0
-
-        # aggregate
-        avg = 0
-        for point in points:
-            avg += self.y_l_[point]
-        avg = avg / len(points)
-
-        if info:
-            return avg, points
-        return avg
+        return np.sum(np.multiply(self.y_l_, a))
 
 
-    def predict(self, X, alpha=None, info=False):
+    def predict(self, X, kernel=None, metric=None, bandwidth=1, **kwargs):
         """
-        Performs the COBRA aggregation scheme, calls pred.
+        Performs the Kernel-COBRA aggregation scheme, calls pred.
 
         Parameters
         ----------
         X: array-like, [n_features]
 
-        alpha: int, optional
-            alpha refers to the number of machines the prediction must be close to to be considered during aggregation.
+        kernel: function, optional
+            kernel refers to the kernel method which we wish to use to perform the aggregation.
 
-        info: boolean, optional
-            If info is true the list of points selected in the aggregation is returned.
+        metric: function, optional
+            metric refers to the metric method which we wish to use to perform the aggregation.
+
+        bandwidth: float, optional
+            Bandwidth for the deafult kernel value (gaussian), and is set to 1.
+
+        kwargs requires you to pass arguments with "kernel_params" and "metric_params", if the custom kernel or metric
+        has more paramteres.        
 
         Returns
         -------
-        result: prediction
+        avg: prediction
 
         """
 
-        # sets alpha as the total number of machines as a default value
-
         X = check_array(X)
 
-        if alpha is None:
-            alpha = len(self.estimators_)
         if X.ndim == 1:
-            return self.pred(X.reshape(1, -1), info=info, alpha=alpha)
+            return self.pred(X.reshape(1, -1))
 
         result = np.zeros(len(X))
         avg_points = 0
         index = 0
         for vector in X:
-            if info:
-                result[index], points = self.pred(vector.reshape(1, -1), info=info, alpha=alpha)
-                avg_points += len(points)
-            else:
-                result[index] = self.pred(vector.reshape(1, -1), info=info, alpha=alpha)
+            result[index] = self.pred(vector.reshape(1, -1), kernel=kernel, metric=metric, bandwidth=bandwidth, **kwargs)
             index += 1
-
-        if info:
-            avg_points = avg_points / len(X_array)
-            return result, avg_points
 
         return result
 
@@ -293,16 +232,15 @@ class Cobra(BaseEstimator):
     def load_default(self, machine_list='basic'):
         """
         Loads 4 different scikit-learn regressors by default. The advanced list adds more machines. 
-
         Parameters
         ----------
         machine_list: optional, list of strings
-            List of default machine names to be loaded.
+            List of default machine names to be loaded. 
+            Default is basic,
         Returns
         -------
         self : returns an instance of self.
         """
-
         if machine_list == 'basic':
             machine_list = ['tree', 'ridge', 'random_forest', 'svm']
         if machine_list == 'advanced':
@@ -320,7 +258,7 @@ class Cobra(BaseEstimator):
                 if machine == 'random_forest':
                     self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
                 if machine == 'svm':
-                    self.estimators_['svm'] = LinearSVR(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                    self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
                 if machine == 'sgd':
                     self.estimators_['sgd'] = linear_model.SGDRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
                 if machine == 'bayesian_ridge':

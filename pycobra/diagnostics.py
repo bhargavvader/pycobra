@@ -6,6 +6,7 @@ import numpy as np
 from pycobra.cobra import Cobra
 from pycobra.ewa import Ewa
 from pycobra.classifiercobra import ClassifierCobra
+from pycobra.kernelcobra import KernelCobra
 
 import math
 import logging
@@ -468,3 +469,45 @@ class Diagnostics():
         opt = min(MSE, key=MSE.get)
         return opt, MSE[opt]
 
+
+    def optimal_kernelbandwidth(self, X, y, bandwidths=None, info=False):
+        """
+        Find the optimal bandwidth value for the KernelCobra predictor.
+
+        Parameteres
+        -----------
+
+        X: array-like, [n_features]
+            Vector for which we want for optimal bandwidths.
+
+        y: float
+            Target value for query to compare.
+
+        bandwidths: list, optional
+            List of bandwidth values to iterate over for optimal bandwidth.
+
+        info: bool, optional
+            Returns MSE dictionary for each bandwidth value.
+
+        Returns
+        -------
+
+        MSE: dictionary mapping epsilon with mean squared errors
+        opt: optimal bandwidth value
+
+        """
+
+        if bandwidths is None:
+            bandwidths = np.arange(0.05, 2.55, step=0.10)
+
+        MSE = {}
+        for bandwidth in bandwidths:
+            machine = KernelCobra(random_state=self.random_state)
+            machine.fit(self.aggregate.X_, self.aggregate.y_)
+            results = machine.predict(X, bandwidth=bandwidth)
+            MSE[bandwidth] = (mean_squared_error(y, results))
+
+        if info:
+            return MSE
+        opt = min(MSE, key=MSE.get)
+        return opt, MSE[opt]
