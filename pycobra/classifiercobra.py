@@ -1,10 +1,13 @@
 # Licensed under the MIT License - https://opensource.org/licenses/MIT
 
 from sklearn import neighbors, tree, svm
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import SGDClassifier, LogisticRegression
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.neural_network import MLPClassifier
 
 import math
 import numpy as np
@@ -36,8 +39,9 @@ class ClassifierCobra(BaseEstimator):
             This value is used to determine which points from y_l are used to aggregate.
 
     """
-    def __init__(self, random_state=None):
+    def __init__(self, random_state=None, machine_list='basic'):
         self.random_state = random_state
+        self.machine_list = machine_list
 
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
@@ -79,7 +83,7 @@ class ClassifierCobra(BaseEstimator):
             # set-up COBRA with default machines
             if default:
                 self.split_data()
-                self.load_default()
+                self.load_default(machine_list=self.machine_list)
                 self.load_machine_predictions()
         except ValueError:
             return self
@@ -177,24 +181,48 @@ class ClassifierCobra(BaseEstimator):
         if M is None:
             M = len(self.estimators_)
         if X.ndim == 1:
-            return self.pred(X.reshape(1, -1), info=info, M=M)
+            return self.pred(X.reshape(1, -1), M=M)
 
         result = np.zeros(len(X))
         avg_points = 0
         index = 0
         for vector in X:
             if info:
-                result[index], points = self.pred(vector.reshape(1, -1), info=info, M=M)
+                result[index], points = self.pred(vector.reshape(1, -1), M=M, info=info)
                 avg_points += len(points)
             else:
-                result[index] = self.pred(vector.reshape(1, -1), info=info, M=M)
+                result[index] = self.pred(vector.reshape(1, -1), M=M)
             index += 1
-
+        
         if info:
             avg_points = avg_points / len(X_array)
             return result, avg_points
-
+        
         return result
+
+
+    def predict_proba(self, X, kernel=None, metric=None, bandwidth=1, **kwargs): 
+        """
+        Performs the ClassifierCobra aggregation scheme and calculates probability of a point being in a particular class.
+        ClassifierCobra performs a majority vote among all points which are retained by the COBRA procedure.
+        
+        NOTE: this method is to visualise boundaries.
+        The current method is just the mean of the consituent machines, as the concept of that kind of predicted probability
+        doesn't exist (yet) for classifier cobra.
+
+        Parameters
+        ----------
+        X: array-like, [n_features]
+        """
+
+        probs = []
+        for machine in self.estimators_:
+            try:
+                probs.append(self.estimators_[machine].predict_proba(X))
+            except AttributeError:
+                continue
+        prob = np.mean(probs, axis=0)
+        return prob
 
 
     def split_data(self, k=None, l=None, shuffle_data=True):
@@ -239,9 +267,10 @@ class ClassifierCobra(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['sgd', 'tree', 'knn', 'svm']):
+    def load_default(self, machine_list='basic'):
         """
-        Loads 4 different scikit-learn regressors by default.
+        Loads 4 different scikit-learn regressors by default. The advanced list adds more machines. 
+        As of current release SGD algorithm is not included in the advanced list.
 
         Parameters
         ----------
@@ -251,15 +280,29 @@ class ClassifierCobra(BaseEstimator):
         -------
         self : returns an instance of self.
         """
+        if machine_list == 'basic':
+            machine_list = ['sgd', 'tree', 'knn', 'svm']
+        if machine_list == 'advanced':
+            machine_list = ['tree', 'knn', 'svm', 'logreg', 'naive_bayes', 'lda', 'neural_network']
+
         for machine in machine_list:
-            if machine == 'svm':
-                self.estimators_['svm'] = svm.SVC().fit(self.X_k_, self.y_k_)
-            if machine == 'knn':
-                self.estimators_['knn'] = neighbors.KNeighborsClassifier().fit(self.X_k_, self.y_k_)
-            if machine == 'sgd':
-                self.estimators_['sgd'] = SGDClassifier(loss="hinge", penalty="l2").fit(self.X_k_, self.y_k_)
-            if machine == 'tree':
-                self.estimators_['tree'] = tree.DecisionTreeClassifier().fit(self.X_k_, self.y_k_)
+            try:
+                if machine == 'svm':
+                    self.estimators_['svm'] = svm.SVC().fit(self.X_k_, self.y_k_)
+                if machine == 'knn':
+                    self.estimators_['knn'] = neighbors.KNeighborsClassifier().fit(self.X_k_, self.y_k_)
+                if machine == 'tree':
+                    self.estimators_['tree'] = tree.DecisionTreeClassifier().fit(self.X_k_, self.y_k_)
+                if machine == 'logreg':
+                    self.estimators_['logreg'] = LogisticRegression(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'naive_bayes':
+                    self.estimators_['naive_bayes'] = GaussianNB().fit(self.X_k_, self.y_k_)
+                if machine == 'lda':
+                    self.estimators_['lda'] = LinearDiscriminantAnalysis().fit(self.X_k_, self.y_k_)
+                if machine == 'neural_network':
+                    self.estimators_['neural_network'] = MLPClassifier(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+            except ValueError:
+                continue
 
         return self
 
@@ -308,3 +351,28 @@ class ClassifierCobra(BaseEstimator):
                 self.machine_predictions_[machine] = self.estimators_[machine].predict(self.X_l_)
 
         return self
+
+
+    def load_machine_proba_predictions(self, predictions=None):
+        """
+        Stores the trained machines' predicitons on D_l in a dictionary, to be used for predictions.
+        Should be run after all the machines to be used for aggregation is loaded.
+
+        Parameters
+        ----------
+        predictions: dictionary, optional
+            A pre-existing machine:predictions dictionary can also be loaded.
+
+        Returns
+        -------
+        self : returns an instance of self.
+        """
+        self.machine_proba_predictions_ = {}
+        if predictions is None:
+            for machine in self.estimators_:
+                try:
+                    self.machine_proba_predictions_[machine] = self.estimators_[machine].predict_proba(self.X_l_)
+                except AttributeError:
+                    self.machine_proba_predictions_[machine] = self.estimators_[machine].decision_function(self.X_l_)
+        return self
+

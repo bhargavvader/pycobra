@@ -4,6 +4,7 @@ from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
+from sklearn.neural_network import MLPRegressor
 
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
@@ -45,9 +46,9 @@ class KernelCobra(BaseEstimator):
 
     """
 
-    def __init__(self, random_state=None):
+    def __init__(self, random_state=None, machine_list='basic'):
         self.random_state = random_state
-
+        self.machine_list = machine_list
 
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
@@ -88,7 +89,7 @@ class KernelCobra(BaseEstimator):
         # set-up COBRA with default machines
         if default:
             self.split_data()
-            self.load_default()
+            self.load_default(machine_list=self.machine_list)
             self.load_machine_predictions()
 
         return self
@@ -139,7 +140,8 @@ class KernelCobra(BaseEstimator):
             except KeyError:
                 a = np.divide(kernel(a), np.sum(kernel(a)))
         else:
-            a = np.divide(np.exp(- bandwidth * a), np.sum(np.exp(- bandwidth * a)))
+            exp = np.nan_to_num(np.exp(- bandwidth * a))
+            a = np.nan_to_num(np.divide(exp, np.sum(exp)))
 
         return np.sum(np.multiply(self.y_l_, a))
 
@@ -227,31 +229,42 @@ class KernelCobra(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm']):
+    def load_default(self, machine_list='basic'):
         """
-        Loads 4 different scikit-learn regressors by default.
-
+        Loads 4 different scikit-learn regressors by default. The advanced list adds more machines. 
         Parameters
         ----------
         machine_list: optional, list of strings
-            List of default machine names to be loaded.
+            List of default machine names to be loaded. 
+            Default is basic,
         Returns
         -------
         self : returns an instance of self.
         """
+        if machine_list == 'basic':
+            machine_list = ['tree', 'ridge', 'random_forest', 'svm']
+        if machine_list == 'advanced':
+            machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm', 'bayesian_ridge', 'sgd']
+
         self.estimators_ = {}
         for machine in machine_list:
-            if machine == 'lasso':
-                self.estimators_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
-            if machine == 'tree':
-                self.estimators_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
-            if machine == 'ridge':
-                self.estimators_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
-            if machine == 'random_forest':
-                self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
-            if machine == 'svm':
-                self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
-
+            try:
+                if machine == 'lasso':
+                    self.estimators_['lasso'] = linear_model.LassoCV(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'tree':
+                    self.estimators_['tree'] = DecisionTreeRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'ridge':
+                    self.estimators_['ridge'] = linear_model.RidgeCV().fit(self.X_k_, self.y_k_)
+                if machine == 'random_forest':
+                    self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'svm':
+                    self.estimators_['svm'] = SVR().fit(self.X_k_, self.y_k_)
+                if machine == 'sgd':
+                    self.estimators_['sgd'] = linear_model.SGDRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'bayesian_ridge':
+                    self.estimators_['bayesian_ridge'] = linear_model.BayesianRidge().fit(self.X_k_, self.y_k_)
+            except ValueError:
+                continue
         return self
 
 

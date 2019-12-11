@@ -5,6 +5,7 @@ import numpy as np
 
 from pycobra.cobra import Cobra
 from pycobra.ewa import Ewa
+from pycobra.kernelcobra import KernelCobra
 
 import logging
 
@@ -36,9 +37,13 @@ class TestPrediction(unittest.TestCase):
         ewa = Ewa(random_state=0)
         ewa.fit(X_train, Y_train)
 
+        kernel = KernelCobra(random_state=0)
+        kernel.fit(X_train, Y_train)
+
         self.test_data = X_test
         self.cobra = cobra
         self.ewa = ewa
+        self.kernelcobra = kernel
 
     def test_cobra_predict(self):
         expected = 2.7310842344617035
@@ -50,10 +55,15 @@ class TestPrediction(unittest.TestCase):
         result = self.ewa.predict(self.test_data[0].reshape(1, -1))
         self.assertAlmostEqual(expected, result[0])        
 
+    def test_kernel_predict(self):
+        expected = 2.613685190585763
+        result = self.kernelcobra.predict(self.test_data[0].reshape(1, -1))
+        self.assertAlmostEqual(expected, result[0])
+
     def test_estimators(self):
         check_estimator(Cobra)
         check_estimator(Ewa)
-
+        check_estimator(KernelCobra)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)

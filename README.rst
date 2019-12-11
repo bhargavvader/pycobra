@@ -56,7 +56,7 @@ Dependencies
 ~~~~~~~~~~~~
 
 -  Python 2.7+, 3.4+
--  numpy, scipy, scikit-learn, matplotlib
+-  numpy, scipy, scikit-learn, matplotlib, pandas, seaborn
 
 References
 ~~~~~~~~~~

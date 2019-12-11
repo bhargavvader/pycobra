@@ -69,10 +69,10 @@ class TestVisualisation(unittest.TestCase):
 
         expected_data_len =  100
         data = self.cobra_vis.boxplot(info=True)
-        self.assertEqual(len(data[0]), expected_data_len)
+        self.assertEqual(len(data["Cobra"]), expected_data_len)
 
         data = self.ewa_vis.boxplot(info=True)
-        self.assertEqual(len(data[0]), expected_data_len)
+        self.assertEqual(len(data["Cobra"]), expected_data_len)
 
     def test_QQ(self):
         self.cobra_vis.QQ()

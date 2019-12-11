@@ -4,6 +4,7 @@ from sklearn import linear_model
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import LinearSVR
+from sklearn.neural_network import MLPRegressor
 
 from sklearn.utils import shuffle
 from sklearn.base import BaseEstimator
@@ -49,10 +50,11 @@ class Cobra(BaseEstimator):
 
     """
 
-    def __init__(self, random_state=None, epsilon=None):
+    def __init__(self, random_state=None, epsilon=None, machine_list='basic'):
         self.random_state = random_state
         self.epsilon = epsilon
-
+        self.machine_list = machine_list
+    
     def fit(self, X, y, default=True, X_k=None, X_l=None, y_k=None, y_l=None):
         """
         Parameters
@@ -92,7 +94,7 @@ class Cobra(BaseEstimator):
         # set-up COBRA with default machines
         if default:
             self.split_data()
-            self.load_default()
+            self.load_default(machine_list=self.machine_list)
             self.load_machine_predictions()
 
         return self
@@ -127,7 +129,7 @@ class Cobra(BaseEstimator):
             emax = max(a) - min(a)
             erange = np.linspace(emin, emax, grid_points)
             tuned_parameters = [{'epsilon': erange}]
-            clf = GridSearchCV(self, tuned_parameters, cv=5, scoring="neg_mean_squared_error")
+            clf = GridSearchCV(self, tuned_parameters, scoring="neg_mean_squared_error")
             clf.fit(X_epsilon, y_epsilon)
             self.epsilon = clf.best_params_["epsilon"]
             self.estimators_, self.machine_predictions_ = {}, {}
@@ -288,9 +290,9 @@ class Cobra(BaseEstimator):
         return self
 
 
-    def load_default(self, machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm']):
+    def load_default(self, machine_list='basic'):
         """
-        Loads 4 different scikit-learn regressors by default.
+        Loads 4 different scikit-learn regressors by default. The advanced list adds more machines. 
 
         Parameters
         ----------
@@ -300,6 +302,12 @@ class Cobra(BaseEstimator):
         -------
         self : returns an instance of self.
         """
+
+        if machine_list == 'basic':
+            machine_list = ['tree', 'ridge', 'random_forest', 'svm']
+        if machine_list == 'advanced':
+            machine_list=['lasso', 'tree', 'ridge', 'random_forest', 'svm', 'bayesian_ridge', 'sgd']
+
         self.estimators_ = {}
         for machine in machine_list:
             try:
@@ -313,6 +321,10 @@ class Cobra(BaseEstimator):
                     self.estimators_['random_forest'] = RandomForestRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
                 if machine == 'svm':
                     self.estimators_['svm'] = LinearSVR(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'sgd':
+                    self.estimators_['sgd'] = linear_model.SGDRegressor(random_state=self.random_state).fit(self.X_k_, self.y_k_)
+                if machine == 'bayesian_ridge':
+                    self.estimators_['bayesian_ridge'] = linear_model.BayesianRidge().fit(self.X_k_, self.y_k_)
             except ValueError:
                 continue
         return self
