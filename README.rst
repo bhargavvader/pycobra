@@ -14,6 +14,8 @@ If you are using pycobra, please consider citing the following papers:
 
 - Biau, Fischer, Guedj and Malley (2016), COBRA: A combined regression strategy. Journal of Multivariate Analysis (`webpage <https://doi.org/10.1016/j.jmva.2015.04.007>`__)
 
+All these references are included in the file ``pycobra.bib``.
+
 What is pycobra?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
