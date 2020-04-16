@@ -3,6 +3,22 @@
 pycobra
 -------
 
+Citation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are using pycobra, please consider citing the following papers:
+
+- Guedj and Srinivasa Desikan (2020), Kernel-based ensemble learning in Python. Information (`webpage <https://doi.org/10.3390/info11020063>`__)
+
+- Guedj and Srinivasa Desikan (2018), Pycobra: A Python Toolbox for Ensemble Learning and Visualisation. Journal of Machine Learning Research (`webpage <http://jmlr.org/beta/papers/v18/17-228.html>`__)
+
+- Biau, Fischer, Guedj and Malley (2016), COBRA: A combined regression strategy. Journal of Multivariate Analysis (`webpage <https://doi.org/10.1016/j.jmva.2015.04.007>`__)
+
+All these references are included in the file ``pycobra.bib``.
+
+What is pycobra?
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 pycobra is a python library for ensemble learning. It serves as a
 toolkit for regression and classification using these ensembled
 machines, and also for visualisation of the performance of the new
@@ -63,6 +79,8 @@ References
 
 -  B. Guedj and B. Srinivasa Desikan (2018). Pycobra: A Python Toolbox for Ensemble Learning and Visualisation. 
    Journal of Machine Learning Research, vol. 18 (190), 1--5.
+-  B. Guedj and B. Srinivasa Desikan (2020). Kernel-based ensemble learning in Python. 
+   Information, vol. 11(2).
 -  G. Biau, A. Fischer, B. Guedj and J. D. Malley (2016), COBRA: A
    combined regression strategy, Journal of Multivariate Analysis.
 -  M. Mojirsheibani (1999), Combining Classifiers via Discretization,
